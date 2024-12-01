@@ -221,6 +221,7 @@ components:
               items:
                 $ref: '#/components/schemas/Meeting'
 
+
     Meeting:
       type: object
       properties:
