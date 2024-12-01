@@ -1,8 +1,10 @@
 openapi: 3.0.0
 info:
   title: Student-Teacher Meeting Scheduler API
-  version: 1.3.0
-  description: An API for scheduling meetings, managing persons, students, teachers, their ratings, and integrating with Google services.
+  version: 1.4.0
+  description: |
+    An API for scheduling meetings, managing persons, students, teachers, their ratings, and integrating with Google services.
+    Additional endpoints allow managing teachers, students, and scheduling multi-participant meetings.
 
 servers:
   - url: http://localhost:8000
@@ -65,30 +67,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Person'
-    post:
-      summary: Create a new person
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Person'
-      responses:
-        '201':
-          description: Person created successfully
-    delete:
-      summary: Delete a person by ID
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Person deleted successfully
-        '404':
-          description: Person not found
 
   /students:
     get:
@@ -126,6 +104,19 @@ paths:
           description: Student deleted successfully
         '404':
           description: Student not found
+    put:
+      summary: Update student details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Student'
+      responses:
+        '200':
+          description: Student updated successfully.
+        '404':
+          description: Student not found.
 
   /teachers:
     get:
@@ -163,6 +154,46 @@ paths:
           description: Teacher deleted successfully
         '404':
           description: Teacher not found
+    put:
+      summary: Update teacher details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Teacher'
+      responses:
+        '200':
+          description: Teacher updated successfully.
+        '404':
+          description: Teacher not found.
+
+  /meetings:
+    get:
+      summary: Get a list of all meetings
+      responses:
+        '200':
+          description: A list of meetings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Meeting'
+    post:
+      summary: Create a new meeting
+      description: Schedule a meeting involving multiple participants.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Meeting'
+      responses:
+        '201':
+          description: Meeting created successfully.
+        '400':
+          description: Invalid meeting details provided.
 
 components:
   schemas:

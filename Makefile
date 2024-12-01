@@ -3,6 +3,7 @@ FLASK_APP=server/app.py
 FLASK_ENV=development
 FLASK_PORT=5000
 PID_FILE=flask_server.pid
+SWAGGER_FILE=swagger.yaml
 
 # Run the Flask server
 run:
@@ -28,3 +29,8 @@ clean:
 	else \
 		echo "Nothing to clean."; \
 	fi
+
+generate-server:
+	@echo "Generating server from $(SWAGGER_FILE)..."
+	openapi-python-client generate --path $(SWAGGER_FILE)
+	@echo "Done generating server."

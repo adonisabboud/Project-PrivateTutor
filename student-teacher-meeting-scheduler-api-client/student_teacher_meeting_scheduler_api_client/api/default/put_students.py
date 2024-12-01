@@ -5,25 +5,27 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...types import UNSET, Response
+from ...models.student import Student
+from ...types import Response
 
 
 def _get_kwargs(
     *,
-    id: int,
+    body: Student,
 ) -> Dict[str, Any]:
-    params: Dict[str, Any] = {}
-
-    params["id"] = id
-
-    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+    headers: Dict[str, Any] = {}
 
     _kwargs: Dict[str, Any] = {
-        "method": "delete",
-        "url": "/persons",
-        "params": params,
+        "method": "put",
+        "url": "/students",
     }
 
+    _body = body.to_dict()
+
+    _kwargs["json"] = _body
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -50,12 +52,12 @@ def _build_response(*, client: Union[AuthenticatedClient, Client], response: htt
 def sync_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
-    id: int,
+    body: Student,
 ) -> Response[Any]:
-    """Delete a person by ID
+    """Update student details
 
     Args:
-        id (int):
+        body (Student):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -66,7 +68,7 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        id=id,
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -79,12 +81,12 @@ def sync_detailed(
 async def asyncio_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
-    id: int,
+    body: Student,
 ) -> Response[Any]:
-    """Delete a person by ID
+    """Update student details
 
     Args:
-        id (int):
+        body (Student):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -95,7 +97,7 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        id=id,
+        body=body,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
