@@ -1,78 +1,109 @@
-openapi: 3.0.2
+openapi: 3.0.0
 info:
-  title: Private Tutor Scheduling API
-  description: API for private tutors to manage their schedules and for students to book tutoring sessions.
-  version: 1.0.0
+  title: Student-Teacher Meeting Scheduler API
+  version: 1.3.0
+  description: An API for scheduling meetings, managing persons, students, teachers, their ratings, and integrating with Google services.
+
 servers:
-  - url: 'http://localhost:5000'
-    description: Development server
+  - url: http://localhost:8000
+    description: Local development server
 
 paths:
-  /tutors/{tutorId}/schedules:
+  /auth/login/google:
     get:
-      summary: Get a tutor's schedule
+      summary: Login via Google
+      description: Redirects the user to Google's OAuth2 login page.
+      responses:
+        '302':
+          description: Redirect to Google login page.
+        '400':
+          description: Failed to initiate Google login.
+
+  /auth/callback/google:
+    get:
+      summary: Google OAuth2 Callback
+      description: Handles the OAuth2 callback from Google and stores user information.
       parameters:
-        - in: path
-          name: tutorId
+        - name: code
+          in: query
           required: true
           schema:
             type: string
-          description: The ID of the tutor
       responses:
         '200':
-          description: Successfully retrieved the schedule
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Schedule'
-        '404':
-          description: Schedule not found
+          description: Successful login.
+        '400':
+          description: Failed to authenticate.
+
+  /meetings/schedule-google-calendar:
     post:
-      summary: Create a new schedule for a tutor
-      parameters:
-        - in: path
-          name: tutorId
-          required: true
-          schema:
-            type: string
-          description: The ID of the tutor
+      summary: Schedule a meeting in Google Calendar
+      description: Creates a meeting and adds it to the user's Google Calendar.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Schedule'
-      responses:
-        '201':
-          description: Schedule created successfully
-        '400':
-          description: Error in data format
-
-  /students/{studentId}/sessions:
-    get:
-      summary: View available tutoring sessions for a student
-      parameters:
-        - in: path
-          name: studentId
-          required: true
-          schema:
-            type: string
-          description: The ID of the student
+              $ref: '#/components/schemas/Meeting'
       responses:
         '200':
-          description: Successfully retrieved available sessions
+          description: Meeting successfully scheduled in Google Calendar.
+        '400':
+          description: Failed to create the meeting.
+        '401':
+          description: Unauthorized, user not logged in.
+
+  /persons:
+    get:
+      summary: Get a list of all persons
+      responses:
+        '200':
+          description: A list of persons
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Class'
-        '404':
-          description: No sessions found
-
-  /students/register:
+                  $ref: '#/components/schemas/Person'
     post:
-      summary: Register a new student
+      summary: Create a new person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
+      responses:
+        '201':
+          description: Person created successfully
+    delete:
+      summary: Delete a person by ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Person deleted successfully
+        '404':
+          description: Person not found
+
+  /students:
+    get:
+      summary: Get a list of all students
+      responses:
+        '200':
+          description: A list of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+    post:
+      summary: Create a new student
       requestBody:
         required: true
         content:
@@ -81,13 +112,35 @@ paths:
               $ref: '#/components/schemas/Student'
       responses:
         '201':
-          description: Student registered successfully
-        '400':
-          description: Error in data format
+          description: Student created successfully
+    delete:
+      summary: Delete a student by ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student deleted successfully
+        '404':
+          description: Student not found
 
-  /teachers/add:
+  /teachers:
+    get:
+      summary: Get a list of all teachers
+      responses:
+        '200':
+          description: A list of teachers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Teacher'
     post:
-      summary: Add a new teacher
+      summary: Create a new teacher
       requestBody:
         required: true
         content:
@@ -96,39 +149,20 @@ paths:
               $ref: '#/components/schemas/Teacher'
       responses:
         '201':
-          description: Teacher added successfully
-        '400':
-          description: Error in data format
-
-  /meetings/schedule:
-    post:
-      summary: Schedule a meeting between a student and a teacher
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                studentId:
-                  type: string
-                  description: The ID of the student
-                teacherId:
-                  type: string
-                  description: The ID of the teacher
-                dateTime:
-                  type: string
-                  format: 'date-time'
-                  description: Date and time of the meeting
-              required:
-                - studentId
-                - teacherId
-                - dateTime
+          description: Teacher created successfully
+    delete:
+      summary: Delete a teacher by ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
       responses:
-        '201':
-          description: Meeting scheduled successfully
-        '400':
-          description: Error in data format
+        '200':
+          description: Teacher deleted successfully
+        '404':
+          description: Teacher not found
 
 components:
   schemas:
@@ -136,96 +170,76 @@ components:
       type: object
       properties:
         id:
-          type: string
-          description: Unique identifier for the person
+          type: integer
         name:
           type: string
-          description: Full name of the person
-        email:
-          type: string
-          format: email
-          description: Email address of the person
         phone:
           type: string
-          description: Phone number of the person
-      required:
-        - id
-        - name
-        - email
-        - phone
-
-    Schedule:
-      type: object
-      properties:
-        scheduleId:
+        email:
           type: string
-          description: The unique identifier for the schedule
-        date:
+        about_section:
           type: string
-          format: date
-          description: The date of the schedule
-        sessions:
+        available:
           type: array
           items:
-            $ref: '#/components/schemas/Class'
-      required:
-        - scheduleId
-        - date
-        - sessions
-
-    Class:
-      type: object
-      properties:
-        sessionId:
-          type: string
-          description: The unique identifier for the tutoring session
-        subject:
-          type: string
-          description: Subject of the session
-        startTime:
-          type: string
-          format: 'date-time'
-          description: Start time of the session
-        endTime:
-          type: string
-          format: 'date-time'
-          description: End time of the session
-      required:
-        - sessionId
-        - subject
-        - startTime
-        - endTime
+            type: string
+            format: date-time
+        rating:
+          type: number
+          format: float
+          description: Average rating for the person, on a scale of 0 to 5.
+          example: 4.5
 
     Student:
       allOf:
         - $ref: '#/components/schemas/Person'
         - type: object
           properties:
-            availableTimes:
+            subjects_interested_in_learning:
               type: array
               items:
                 type: string
-                format: time
-                description: Available times in HH:mm format
-          required:
-            - availableTimes
+            meetings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Meeting'
 
     Teacher:
       allOf:
         - $ref: '#/components/schemas/Person'
         - type: object
           properties:
-            availableTimes:
+            subjects_to_teach:
               type: array
               items:
                 type: string
-                format: time
-                description: Available times in HH:mm format
-            courses:
+            hourly_rate:
+              type: number
+              format: float
+            meetings:
               type: array
               items:
-                type: string
-              description: List of courses taught by the teacher
-          required:
-            - availableTimes
-            - courses
+                $ref: '#/components/schemas/Meeting'
+
+    Meeting:
+      type: object
+      properties:
+        location:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        finish_time:
+          type: string
+          format: date-time
+        subject:
+          type: string
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+        attached_files:
+          type: array
+          items:
+            type: string
+            format: binary
