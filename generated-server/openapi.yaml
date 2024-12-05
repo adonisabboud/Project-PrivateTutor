@@ -1,0 +1,286 @@
+openapi: 3.0.2
+info:
+  description: API for private tutors to manage their schedules and for students to
+    book tutoring sessions.
+  title: Private Tutor Scheduling API
+  version: 1.0.0
+servers:
+- description: Development server
+  url: http://localhost:5000
+paths:
+  /tutors/{tutorId}/schedules:
+    get:
+      parameters:
+      - description: The ID of the tutor
+        explode: false
+        in: path
+        name: tutorId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+          description: Successfully retrieved the schedule
+        "404":
+          description: Schedule not found
+      summary: Get a tutor's schedule
+    post:
+      parameters:
+      - description: The ID of the tutor
+        explode: false
+        in: path
+        name: tutorId
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+        required: true
+      responses:
+        "201":
+          description: Schedule created successfully
+        "400":
+          description: Error in data format
+      summary: Create a new schedule for a tutor
+  /students/{studentId}/sessions:
+    get:
+      parameters:
+      - description: The ID of the student
+        explode: false
+        in: path
+        name: studentId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Class'
+                type: array
+          description: Successfully retrieved available sessions
+        "404":
+          description: No sessions found
+      summary: View available tutoring sessions for a student
+  /students/register:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Student'
+        required: true
+      responses:
+        "201":
+          description: Student registered successfully
+        "400":
+          description: Error in data format
+      summary: Register a new student
+  /teachers/add:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Teacher'
+        required: true
+      responses:
+        "201":
+          description: Teacher added successfully
+        "400":
+          description: Error in data format
+      summary: Add a new teacher
+  /meetings/schedule:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/_meetings_schedule_post_request'
+        required: true
+      responses:
+        "201":
+          description: Meeting scheduled successfully
+        "400":
+          description: Error in data format
+      summary: Schedule a meeting between a student and a teacher
+components:
+  schemas:
+    Person:
+      properties:
+        id:
+          description: Unique identifier for the person
+          title: id
+          type: string
+        name:
+          description: Full name of the person
+          title: name
+          type: string
+        email:
+          description: Email address of the person
+          format: email
+          title: email
+          type: string
+        phone:
+          description: Phone number of the person
+          title: phone
+          type: string
+      required:
+      - email
+      - id
+      - name
+      - phone
+      title: Person
+      type: object
+    Schedule:
+      example:
+        date: 2000-01-23
+        sessions:
+        - subject: subject
+          startTime: 2000-01-23T04:56:07.000+00:00
+          sessionId: sessionId
+          endTime: 2000-01-23T04:56:07.000+00:00
+        - subject: subject
+          startTime: 2000-01-23T04:56:07.000+00:00
+          sessionId: sessionId
+          endTime: 2000-01-23T04:56:07.000+00:00
+        scheduleId: scheduleId
+      properties:
+        scheduleId:
+          description: The unique identifier for the schedule
+          title: scheduleId
+          type: string
+        date:
+          description: The date of the schedule
+          format: date
+          title: date
+          type: string
+        sessions:
+          items:
+            $ref: '#/components/schemas/Class'
+          title: sessions
+          type: array
+      required:
+      - date
+      - scheduleId
+      - sessions
+      title: Schedule
+      type: object
+    Class:
+      example:
+        subject: subject
+        startTime: 2000-01-23T04:56:07.000+00:00
+        sessionId: sessionId
+        endTime: 2000-01-23T04:56:07.000+00:00
+      properties:
+        sessionId:
+          description: The unique identifier for the tutoring session
+          title: sessionId
+          type: string
+        subject:
+          description: Subject of the session
+          title: subject
+          type: string
+        startTime:
+          description: Start time of the session
+          format: date-time
+          title: startTime
+          type: string
+        endTime:
+          description: End time of the session
+          format: date-time
+          title: endTime
+          type: string
+      required:
+      - endTime
+      - sessionId
+      - startTime
+      - subject
+      title: Class
+      type: object
+    Student:
+      allOf:
+      - $ref: '#/components/schemas/Person'
+      - properties:
+          availableTimes:
+            items:
+              description: Available times in HH:mm format
+              format: time
+              type: string
+            type: array
+        required:
+        - availableTimes
+        type: object
+      example:
+        phone: phone
+        name: name
+        id: id
+        email: email
+        availableTimes:
+        - availableTimes
+        - availableTimes
+      title: Student
+    Teacher:
+      allOf:
+      - $ref: '#/components/schemas/Person'
+      - properties:
+          availableTimes:
+            items:
+              description: Available times in HH:mm format
+              format: time
+              type: string
+            type: array
+          courses:
+            description: List of courses taught by the teacher
+            items:
+              type: string
+            type: array
+        required:
+        - availableTimes
+        - courses
+        type: object
+      example:
+        courses:
+        - courses
+        - courses
+        phone: phone
+        name: name
+        id: id
+        email: email
+        availableTimes:
+        - availableTimes
+        - availableTimes
+      title: Teacher
+    _meetings_schedule_post_request:
+      properties:
+        studentId:
+          description: The ID of the student
+          title: studentId
+          type: string
+        teacherId:
+          description: The ID of the teacher
+          title: teacherId
+          type: string
+        dateTime:
+          description: Date and time of the meeting
+          format: date-time
+          title: dateTime
+          type: string
+      required:
+      - dateTime
+      - studentId
+      - teacherId
+      title: _meetings_schedule_post_request
+      type: object
