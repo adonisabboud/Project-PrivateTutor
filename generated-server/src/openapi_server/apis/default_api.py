@@ -4,7 +4,7 @@ from typing import Dict, List  # noqa: F401
 import importlib
 import pkgutil
 
-from openapi_server.apis.default_api_base import BaseDefaultApi
+from default_api_base import BaseDefaultApi
 import openapi_server.impl
 
 from fastapi import (  # noqa: F401
