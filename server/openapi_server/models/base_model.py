@@ -2,7 +2,7 @@ import pprint
 
 import typing
 
-from openapi_server import util
+from server.openapi_server import util
 
 T = typing.TypeVar('T')
 

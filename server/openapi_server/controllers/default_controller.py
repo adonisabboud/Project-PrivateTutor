@@ -3,11 +3,11 @@ from typing import Dict
 from typing import Tuple
 from typing import Union
 
-from openapi_server.models.meeting import Meeting  # noqa: E501
-from openapi_server.models.person import Person  # noqa: E501
-from openapi_server.models.student import Student  # noqa: E501
-from openapi_server.models.teacher import Teacher  # noqa: E501
-from openapi_server import util
+from server.openapi_server.models.meeting import Meeting  # noqa: E501
+from server.openapi_server.models.person import Person  # noqa: E501
+from server.openapi_server.models.student import Student  # noqa: E501
+from server.openapi_server.models.teacher import Teacher  # noqa: E501
+from server.openapi_server import util
 
 
 def auth_callback_google_get(code):  # noqa: E501
