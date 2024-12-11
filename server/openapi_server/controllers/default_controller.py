@@ -3,6 +3,9 @@ from typing import Dict
 from typing import Tuple
 from typing import Union
 
+from flask import request
+
+from server.openapi_server.models.Mongo import mongo_db
 from server.openapi_server.models.meeting import Meeting  # noqa: E501
 from server.openapi_server.models.person import Person  # noqa: E501
 from server.openapi_server.models.student import Student  # noqa: E501
@@ -33,39 +36,12 @@ def auth_login_google_get():  # noqa: E501
     """
     return 'do some magic!'
 
-
-def meetings_get():  # noqa: E501
-    """Get a list of all meetings
-
-     # noqa: E501
-
-
-    :rtype: Union[List[Meeting], Tuple[List[Meeting], int], Tuple[List[Meeting], int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def meetings_post(meeting):  # noqa: E501
-    """Create a new meeting
-
-    Schedule a meeting involving multiple participants. # noqa: E501
-
-    :param meeting: 
-    :type meeting: dict | bytes
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    if connexion.request.is_json:
-        meeting = Meeting.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
-
-
 def meetings_schedule_google_calendar_post(meeting):  # noqa: E501
     """Schedule a meeting in Google Calendar
 
     Creates a meeting and adds it to the user&#39;s Google Calendar. # noqa: E501
 
-    :param meeting: 
+    :param meeting:
     :type meeting: dict | bytes
 
     :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
@@ -73,6 +49,42 @@ def meetings_schedule_google_calendar_post(meeting):  # noqa: E501
     if connexion.request.is_json:
         meeting = Meeting.from_dict(connexion.request.get_json())  # noqa: E501
     return 'do some magic!'
+
+
+def meetings_get():  # noqa: E501
+    """Get a list of all meetings
+
+    :rtype: List[Dict]
+    """
+    try:
+        meetings_collection = mongo_db.get_collection('meetings')
+        meetings = list(meetings_collection.find({}, {'_id': 0}))  # Excludes MongoDB's '_id' from the results
+        return meetings, 200  # Returning a 200 HTTP status code
+    except Exception as e:
+        return {'error': str(e)}, 500  # Returning an internal server error code
+
+
+
+def meetings_post():  # noqa: E501
+    """Create a new meeting
+
+    Schedule a meeting involving multiple participants. # noqa: E501
+
+    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
+    """
+    try:
+        if request.is_json:
+            meeting_data = request.get_json()  # Get JSON data from request
+            meetings_collection = mongo_db.get_collection('meetings')
+            meetings_collection.insert_one(meeting_data)
+            return {'message': 'Meeting created successfully'}, 201
+        else:
+            return {'error': 'Request must be JSON'}, 400
+    except Exception as e:
+        return {'error': str(e)}, 500
+
+
+
 
 
 def persons_get():  # noqa: E501

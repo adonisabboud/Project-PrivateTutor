@@ -1,19 +1,27 @@
-#!/usr/bin/.env python3
+from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+import uvicorn
 
-import connexion
+app = FastAPI(title='Student-Teacher Meeting Scheduler API')
 
-from server.openapi_server import encoder
+# Define Pydantic models based on your API schema
+class Meeting(BaseModel):
+    # Example fields; adjust according to your actual OpenAPI specification
+    id: int
+    title: str
+    datetime: str
 
+# Example endpoint to create a meeting
+@app.post("/meetings/", response_model=Meeting)
+def create_meeting(meeting: Meeting):
+    return meeting
 
-def main():
-    app = connexion.App(__name__, specification_dir='./openapi/')
-    app.app.json_encoder = encoder.JSONEncoder
-    app.add_api('openapi.yaml',
-                arguments={'title': 'Student-Teacher Meeting Scheduler API'},
-                pythonic_params=True)
+# Example endpoint to read meetings
+@app.get("/meetings/", response_model=list[Meeting])
+def read_meetings():
+    # Example data return; integrate with your database or data source
+    return [{"id": 1, "title": "Project Discussion", "datetime": "2024-01-01T15:00:00Z"}]
 
-    app.run(port=8080)
-
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8080)

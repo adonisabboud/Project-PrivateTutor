@@ -1,9 +1,7 @@
 from datetime import date, datetime  # noqa: F401
 
 from typing import List, Dict  # noqa: F401
-
-from openai.api_resources import file
-
+from .File import File
 from .base_model import Model
 
 from .person import Person
@@ -38,7 +36,7 @@ class Meeting(Model):
             'finish_time': datetime,
             'subject': str,
             'people': List[Person],
-            'attached_files': List[file]
+            'attached_files': List[File]
         }
 
         self.attribute_map = {
@@ -174,7 +172,7 @@ class Meeting(Model):
         self._people = people
 
     @property
-    def attached_files(self) -> List[file]:
+    def attached_files(self) -> List[File]:
         """Gets the attached_files of this Meeting.
 
 
@@ -184,7 +182,7 @@ class Meeting(Model):
         return self._attached_files
 
     @attached_files.setter
-    def attached_files(self, attached_files: List[file]):
+    def attached_files(self, attached_files: List[File]):
         """Sets the attached_files of this Meeting.
 
 
