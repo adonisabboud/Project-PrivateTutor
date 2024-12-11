@@ -18,8 +18,14 @@ def _deserialize(data, klass):
     elif klass == object:
         return _deserialize_object(data)
     elif klass == datetime.date:
+        # Check if already a date object
+        if isinstance(data, datetime.date):
+            return data
         return deserialize_date(data)
     elif klass == datetime.datetime:
+        # Check if already a datetime object
+        if isinstance(data, datetime.datetime):
+            return data
         return deserialize_datetime(data)
     elif typing_utils.is_generic(klass):
         if typing_utils.is_list(klass):
@@ -28,6 +34,7 @@ def _deserialize(data, klass):
             return _deserialize_dict(data, klass.__args__[1])
     else:
         return deserialize_model(data, klass)
+
 
 
 def _deserialize_primitive(data, klass):

@@ -60,14 +60,13 @@ def save_meeting_to_mongo(collection_name: str, meeting: Meeting) -> dict:
     except Exception as e:
         raise RuntimeError(f"Error saving meeting to MongoDB in collection '{collection_name}': {e}")
 
-
 def get_meeting_from_mongo(collection_name: str, meeting_id: str) -> Meeting:
     """
     Retrieves a Meeting instance from the MongoDB collection.
 
     :param collection_name: Name of the MongoDB collection.
     :param meeting_id: ID of the Meeting to retrieve.
-    :return: The Meeting object.
+    :return: The Meeting object, or None if not found.
     """
     try:
         collection = mongo_db.get_collection(collection_name)
@@ -76,7 +75,7 @@ def get_meeting_from_mongo(collection_name: str, meeting_id: str) -> Meeting:
         if document:
             return Meeting.from_dict(document)
         else:
-            raise ValueError(f"Meeting not found with ID: {meeting_id}")
+            return None
     except Exception as e:
         raise RuntimeError(f"Error retrieving meeting from MongoDB in collection '{collection_name}': {e}")
 
@@ -94,9 +93,12 @@ def update_meeting_in_mongo(collection_name: str, meeting_id: str, updates: dict
         collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(meeting_id)
         result = collection.update_one({'_id': object_id}, {'$set': updates})
-        return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
+        return {
+            "acknowledged": result.acknowledged,
+            "modified_count": result.modified_count
+        }
     except Exception as e:
-        raise RuntimeError(f"Error updating meeting in MongoDB in collection '{collection_name}': {e}")
+        raise RuntimeError(f"Error updating meeting in MongoDB: {e}")
 
 
 def delete_meeting_from_mongo(collection_name: str, meeting_id: str) -> dict:
@@ -111,11 +113,103 @@ def delete_meeting_from_mongo(collection_name: str, meeting_id: str) -> dict:
         collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(meeting_id)
         result = collection.delete_one({'_id': object_id})
-        return {"acknowledged": result.acknowledged, "deleted_count": result.deleted_count}
+        return {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count
+        }
     except Exception as e:
-        raise RuntimeError(f"Error deleting meeting from MongoDB in collection '{collection_name}': {e}")
+        raise RuntimeError(f"Error deleting meeting from MongoDB: {e}")
+
+######################################################################
+from bson import ObjectId
+from server.openapi_server.models.person import Person
+from server.openapi_server.models.DB_utils import mongo_db
 
 
+def save_person_to_mongo(collection_name: str, person: Person) -> dict:
+    """
+    Saves a Person instance to the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param person: Person object to save.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        document = person.to_dict()
+
+        if '_id' in document and document['_id']:
+            # Ensure `_id` is an ObjectId
+            document['_id'] = ObjectId(document['_id'])
+            result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
+            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
+        else:
+            # Insert if no `_id` exists
+            result = collection.insert_one(document)
+            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
+    except Exception as e:
+        raise RuntimeError(f"Error saving person to MongoDB in collection '{collection_name}': {e}")
+
+
+def get_person_from_mongo(collection_name: str, person_id: str) -> Person:
+    """
+    Retrieves a Person instance from the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param person_id: ID of the Person to retrieve.
+    :return: The Person object, or None if not found.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(person_id)
+        document = collection.find_one({'_id': object_id})
+        if document:
+            return Person.from_dict(document)
+        else:
+            return None
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving person from MongoDB in collection '{collection_name}': {e}")
+
+
+def update_person_in_mongo(collection_name: str, person_id: str, updates: dict) -> dict:
+    """
+    Updates a Person instance in the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param person_id: ID of the Person to update.
+    :param updates: Dictionary containing fields to update.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(person_id)
+        result = collection.update_one({'_id': object_id}, {'$set': updates})
+        return {
+            "acknowledged": result.acknowledged,
+            "modified_count": result.modified_count
+        }
+    except Exception as e:
+        raise RuntimeError(f"Error updating person in MongoDB: {e}")
+
+
+def delete_person_from_mongo(collection_name: str, person_id: str) -> dict:
+    """
+    Deletes a Person instance from the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param person_id: ID of the Person to delete.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(person_id)
+        result = collection.delete_one({'_id': object_id})
+        return {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count
+        }
+    except Exception as e:
+        raise RuntimeError(f"Error deleting person from MongoDB: {e}")
 
 
 
