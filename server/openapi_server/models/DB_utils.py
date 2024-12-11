@@ -211,12 +211,178 @@ def delete_person_from_mongo(collection_name: str, person_id: str) -> dict:
     except Exception as e:
         raise RuntimeError(f"Error deleting person from MongoDB: {e}")
 
+##################################################################
+def save_student_to_mongo(collection_name: str, student: Student) -> dict:
+    """
+    Saves a Student instance to the MongoDB collection.
 
+    :param collection_name: Name of the MongoDB collection.
+    :param student: Student object to save.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        document = student.to_dict()
+
+        if '_id' in document and document['_id']:
+            # Ensure `_id` is an ObjectId
+            document['_id'] = ObjectId(document['_id'])
+            result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
+            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
+        else:
+            # Insert if no `_id` exists
+            result = collection.insert_one(document)
+            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
+    except Exception as e:
+        raise RuntimeError(f"Error saving student to MongoDB in collection '{collection_name}': {e}")
+
+def get_student_from_mongo(collection_name: str, student_id: str) -> Student:
+    """
+    Retrieves a Student instance from the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param student_id: ID of the Student to retrieve.
+    :return: The Student object, or None if not found.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(student_id)
+        document = collection.find_one({'_id': object_id})
+        if document:
+            return Student.from_dict(document)
+        else:
+            return None
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving student from MongoDB in collection '{collection_name}': {e}")
+
+def update_student_in_mongo(collection_name: str, student_id: str, updates: dict) -> dict:
+    """
+    Updates a Student instance in the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param student_id: ID of the Student to update.
+    :param updates: Dictionary containing fields to update.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(student_id)
+        result = collection.update_one({'_id': object_id}, {'$set': updates})
+        return {
+            "acknowledged": result.acknowledged,
+            "modified_count": result.modified_count
+        }
+    except Exception as e:
+        raise RuntimeError(f"Error updating student in MongoDB: {e}")
+
+def delete_student_from_mongo(collection_name: str, student_id: str) -> dict:
+    """
+    Deletes a Student instance from the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param student_id: ID of the Student to delete.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(student_id)
+        result = collection.delete_one({'_id': object_id})
+        return {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count
+        }
+    except Exception as e:
+        raise RuntimeError(f"Error deleting student from MongoDB: {e}")
 
 
 
 
 ################################################################
+def save_teacher_to_mongo(collection_name: str, teacher: Teacher) -> dict:
+    """
+    Saves a Teacher instance to the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param teacher: Teacher object to save.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        document = teacher.to_dict()
+
+        if '_id' in document and document['_id']:
+            # Ensure `_id` is an ObjectId
+            document['_id'] = ObjectId(document['_id'])
+            result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
+            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
+        else:
+            # Insert if no `_id` exists
+            result = collection.insert_one(document)
+            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
+    except Exception as e:
+        raise RuntimeError(f"Error saving teacher to MongoDB in collection '{collection_name}': {e}")
+
+def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> Teacher:
+    """
+    Retrieves a Teacher instance from the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param teacher_id: ID of the Teacher to retrieve.
+    :return: The Teacher object, or None if not found.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(teacher_id)
+        document = collection.find_one({'_id': object_id})
+        if document:
+            return Teacher.from_dict(document)
+        else:
+            return None
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving teacher from MongoDB in collection '{collection_name}': {e}")
+
+def update_teacher_in_mongo(collection_name: str, teacher_id: str, updates: dict) -> dict:
+    """
+    Updates a Teacher instance in the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param teacher_id: ID of the Teacher to update.
+    :param updates: Dictionary containing fields to update.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(teacher_id)
+        result = collection.update_one({'_id': object_id}, {'$set': updates})
+        return {
+            "acknowledged": result.acknowledged,
+            "modified_count": result.modified_count
+        }
+    except Exception as e:
+        raise RuntimeError(f"Error updating teacher in MongoDB: {e}")
+
+
+def delete_teacher_from_mongo(collection_name: str, teacher_id: str) -> dict:
+    """
+    Deletes a Teacher instance from the MongoDB collection.
+
+    :param collection_name: Name of the MongoDB collection.
+    :param teacher_id: ID of the Teacher to delete.
+    :return: A dictionary containing the result of the operation.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        object_id = ObjectId(teacher_id)
+        result = collection.delete_one({'_id': object_id})
+        return {
+            "acknowledged": result.acknowledged,
+            "deleted_count": result.deleted_count
+        }
+    except Exception as e:
+        raise RuntimeError(f"Error deleting teacher from MongoDB: {e}")
+
+
+#################################################################
 def save_to_mongo(collection_name: str, data):
     try:
         collection = mongo_db.get_collection(collection_name)

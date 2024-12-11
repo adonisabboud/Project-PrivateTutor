@@ -1,206 +1,132 @@
-import connexion
-from typing import Dict
-from typing import Tuple
-from typing import Union
-
-from flask import request
-
-from server.openapi_server.models.Mongo import mongo_db
-from server.openapi_server.models.meeting import Meeting  # noqa: E501
-from server.openapi_server.models.person import Person  # noqa: E501
-from server.openapi_server.models.student import Student  # noqa: E501
-from server.openapi_server.models.teacher import Teacher  # noqa: E501
-from server.openapi_server import util
-
-
-def auth_callback_google_get(code):  # noqa: E501
-    """Google OAuth2 Callback
-
-    Handles the OAuth2 callback from Google and stores user information. # noqa: E501
-
-    :param code: 
-    :type code: str
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def auth_login_google_get():  # noqa: E501
-    """Login via Google
-
-    Redirects the user to Google&#39;s OAuth2 login page. # noqa: E501
-
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-def meetings_schedule_google_calendar_post(meeting):  # noqa: E501
-    """Schedule a meeting in Google Calendar
-
-    Creates a meeting and adds it to the user&#39;s Google Calendar. # noqa: E501
-
-    :param meeting:
-    :type meeting: dict | bytes
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    if connexion.request.is_json:
-        meeting = Meeting.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
-
-
-def meetings_get():  # noqa: E501
-    """Get a list of all meetings
-
-    :rtype: List[Dict]
-    """
-    try:
-        meetings_collection = mongo_db.get_collection('meetings')
-        meetings = list(meetings_collection.find({}, {'_id': 0}))  # Excludes MongoDB's '_id' from the results
-        return meetings, 200  # Returning a 200 HTTP status code
-    except Exception as e:
-        return {'error': str(e)}, 500  # Returning an internal server error code
-
-
-
-def meetings_post():  # noqa: E501
-    """Create a new meeting
-
-    Schedule a meeting involving multiple participants. # noqa: E501
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    try:
-        if request.is_json:
-            meeting_data = request.get_json()  # Get JSON data from request
-            meetings_collection = mongo_db.get_collection('meetings')
-            meetings_collection.insert_one(meeting_data)
-            return {'message': 'Meeting created successfully'}, 201
-        else:
-            return {'error': 'Request must be JSON'}, 400
-    except Exception as e:
-        return {'error': str(e)}, 500
-
-
-
-
-
-def persons_get():  # noqa: E501
-    """Get a list of all persons
-
-     # noqa: E501
-
-
-    :rtype: Union[List[Person], Tuple[List[Person], int], Tuple[List[Person], int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def students_delete(id):  # noqa: E501
-    """Delete a student by ID
-
-     # noqa: E501
-
-    :param id: 
-    :type id: int
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def students_get():  # noqa: E501
-    """Get a list of all students
-
-     # noqa: E501
-
-
-    :rtype: Union[List[Student], Tuple[List[Student], int], Tuple[List[Student], int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def students_post(student):  # noqa: E501
-    """Create a new student
-
-     # noqa: E501
-
-    :param student: 
-    :type student: dict | bytes
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    if connexion.request.is_json:
-        student = Student.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
-
-
-def students_put(student):  # noqa: E501
-    """Update student details
-
-     # noqa: E501
-
-    :param student: 
-    :type student: dict | bytes
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    if connexion.request.is_json:
-        student = Student.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
-
-
-def teachers_delete(id):  # noqa: E501
-    """Delete a teacher by ID
-
-     # noqa: E501
-
-    :param id: 
-    :type id: int
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def teachers_get():  # noqa: E501
-    """Get a list of all teachers
-
-     # noqa: E501
-
-
-    :rtype: Union[List[Teacher], Tuple[List[Teacher], int], Tuple[List[Teacher], int, Dict[str, str]]
-    """
-    return 'do some magic!'
-
-
-def teachers_post(teacher):  # noqa: E501
-    """Create a new teacher
-
-     # noqa: E501
-
-    :param teacher: 
-    :type teacher: dict | bytes
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    if connexion.request.is_json:
-        teacher = Teacher.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
-
-
-def teachers_put(teacher):  # noqa: E501
-    """Update teacher details
-
-     # noqa: E501
-
-    :param teacher: 
-    :type teacher: dict | bytes
-
-    :rtype: Union[None, Tuple[None, int], Tuple[None, int, Dict[str, str]]
-    """
-    if connexion.request.is_json:
-        teacher = Teacher.from_dict(connexion.request.get_json())  # noqa: E501
-    return 'do some magic!'
+# import connexion
+# from typing import Dict, Tuple, Union, List
+# from flask import request
+#
+# from server.openapi_server.models.DB_utils import (
+#     save_meeting_to_mongo,
+#     get_meeting_from_mongo,
+#     delete_meeting_from_mongo,
+#     update_meeting_in_mongo,
+#     save_student_to_mongo,
+#     get_student_from_mongo,
+#     delete_student_from_mongo,
+#     update_student_in_mongo,
+#     save_teacher_to_mongo,
+#     get_teacher_from_mongo,
+#     delete_teacher_from_mongo,
+#     update_teacher_in_mongo,
+#     mongo_db
+# )
+# from server.openapi_server.models.meeting import Meeting
+# from server.openapi_server.models.student import Student
+# from server.openapi_server.models.teacher import Teacher
+#
+#
+# def auth_callback_google_get(code):
+#     return 'Not implemented yet', 501
+#
+# def auth_login_google_get():
+#     return 'Not implemented yet', 501
+#
+# def meetings_schedule_google_calendar_post(meeting):
+#     return 'Not implemented yet', 501
+#
+# def meetings_get():
+#     try:
+#         meetings_collection = mongo_db.get_collection('meetings')
+#         meetings = list(meetings_collection.find({}, {'_id': 0}))
+#         return meetings, 200
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def meetings_post():
+#     try:
+#         if request.is_json:
+#             meeting_data = request.get_json()
+#             result = save_meeting_to_mongo('meetings', Meeting.from_dict(meeting_data))
+#             if result.get("acknowledged"):
+#                 return {'message': 'Meeting created successfully'}, 201
+#         return {'error': 'Request must be JSON'}, 400
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def persons_get():
+#     return 'Not implemented yet', 501
+#
+# def students_delete(id):
+#     try:
+#         result = delete_student_from_mongo('students', id)
+#         if result.get("deleted_count"):
+#             return {'message': 'Student deleted successfully'}, 200
+#         return {'error': 'Student not found'}, 404
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def students_get():
+#     try:
+#         students_collection = mongo_db.get_collection('students')
+#         students = list(students_collection.find({}, {'_id': 0}))
+#         return students, 200
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def students_post():
+#     try:
+#         if request.is_json:
+#             student_data = request.get_json()
+#             result = save_student_to_mongo('students', Student.from_dict(student_data))
+#             if result.get("acknowledged"):
+#                 return {'message': 'Student created successfully'}, 201
+#         return {'error': 'Request must be JSON'}, 400
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def students_put():
+#     try:
+#         if request.is_json:
+#             student_data = request.get_json()
+#             result = update_student_in_mongo('students', student_data.get('id'), student_data)
+#             if result.get("acknowledged") and result.get("modified_count"):
+#                 return {'message': 'Student updated successfully'}, 200
+#         return {'error': 'Request must be JSON or Student not found'}, 400
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def teachers_delete(id):
+#     try:
+#         result = delete_teacher_from_mongo('teachers', id)
+#         if result.get("deleted_count"):
+#             return {'message': 'Teacher deleted successfully'}, 200
+#         return {'error': 'Teacher not found'}, 404
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def teachers_get():
+#     try:
+#         teachers_collection = mongo_db.get_collection('teachers')
+#         teachers = list(teachers_collection.find({}, {'_id': 0}))
+#         return teachers, 200
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def teachers_post():
+#     try:
+#         if request.is_json:
+#             teacher_data = request.get_json()
+#             result = save_teacher_to_mongo('teachers', Teacher.from_dict(teacher_data))
+#             if result.get("acknowledged"):
+#                 return {'message': 'Teacher created successfully'}, 201
+#         return {'error': 'Request must be JSON'}, 400
+#     except Exception as e:
+#         return {'error': str(e)}, 500
+#
+# def teachers_put():
+#     try:
+#         if request.is_json:
+#             teacher_data = request.get_json()
+#             result = update_teacher_in_mongo('teachers', teacher_data.get('id'), teacher_data)
+#             if result.get("acknowledged") and result.get("modified_count"):
+#                 return {'message': 'Teacher updated successfully'}, 200
+#         return {'error': 'Request must be JSON or Teacher not found'}, 400
+#     except Exception as e:
+#         return {'error': str(e)}, 500
