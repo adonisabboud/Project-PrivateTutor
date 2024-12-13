@@ -53,3 +53,15 @@ def delete_teacher(id: str):
         raise HTTPException(status_code=404, detail="Teacher not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@teachers_router.get("/{id}", response_model=Teacher)
+def get_teacher(id: str):
+    """Retrieve a single teacher by ID."""
+    try:
+        teacher = get_teacher_from_mongo('teachers', id)
+        if not teacher:
+            raise HTTPException(status_code=404, detail="Teacher not found")
+        return teacher
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

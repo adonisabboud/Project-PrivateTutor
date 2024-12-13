@@ -10,7 +10,7 @@ from bson.errors import InvalidId
 from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
-
+from pymongo import MongoClient, errors as pymongo_errors
 
 mongo_db = MongoDatabase()  # Create a global instance
 
@@ -80,20 +80,18 @@ def get_meeting_from_mongo(collection_name: str, meeting_id: str) -> Meeting:
         raise RuntimeError(f"Error retrieving meeting from MongoDB in collection '{collection_name}': {e}")
 
 def update_meeting_in_mongo(collection_name: str, meeting_id: str, updates: dict) -> dict:
-    """
-    Updates a Meeting instance in the MongoDB collection.
-
-    :param collection_name: Name of the MongoDB collection.
-    :param meeting_id: ID of the Meeting to update.
-    :param updates: Dictionary containing fields to update.
-    :return: A dictionary containing the result of the operation.
-    """
     try:
-        collection: Collection = mongo_db.get_collection(collection_name)
+        collection = mongo_db.get_collection(collection_name)
         result = collection.update_one({'_id': ObjectId(meeting_id)}, {'$set': updates})
+        if result.matched_count == 0:
+            # No documents matched, which could mean an invalid ID was provided
+            return {"acknowledged": False, "error": "No document found with the provided ID."}
         return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
-    except PyMongoError as e:
-        raise RuntimeError(f"Error updating meeting in MongoDB: {e}")
+    except pymongo_errors.InvalidId:
+        return {"acknowledged": False, "error": "Invalid ID format."}
+    except pymongo_errors.PyMongoError as e:
+        # Log this error or handle it as needed
+        return {"acknowledged": False, "error": str(e)}
 
 def delete_meeting_from_mongo(collection_name: str, meeting_id: str) -> dict:
     """
