@@ -1,67 +1,40 @@
-import pprint
-import typing
+from pydantic import BaseModel
+from abc import ABC
+from typing import Any, Dict, Type, TypeVar
 
-from server.openapi_server.util import deserialize_model
-
-T = typing.TypeVar('T')
+T = TypeVar('T', bound='Model')
 
 
-class Model:
-    # openapiTypes: The key is attribute name and the
-    # value is attribute type.
-    openapi_types: typing.Dict[str, type] = {}
+class Model(BaseModel, ABC):
+    """Abstract base model providing common functionality for serialization."""
 
-    # attributeMap: The key is attribute name and the
-    # value is json key in definition.
-    attribute_map: typing.Dict[str, str] = {}
+    class Config:
+        # Allow population by field name or alias
+        allow_population_by_field_name = True
+        # Customize JSON serialization
+        json_encoders = {
+            # Add custom serialization logic if needed
+        }
 
     @classmethod
-    def from_dict(cls: typing.Type[T], dikt) -> T:
-        """Returns the dict as a model"""
-        return deserialize_model(dikt, cls)
+    def from_dict(cls: Type[T], dikt: Dict[str, Any]) -> T:
+        """Deserialize a dictionary into a model instance."""
+        return cls.parse_obj(dikt)
 
-    def to_dict(self):
-        """Returns the model properties as a dict
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize the model instance into a dictionary."""
+        return self.dict(by_alias=True, exclude_unset=True)
 
-        :rtype: dict
-        """
-        result = {}
+    def to_str(self) -> str:
+        """Return the string representation of the model."""
+        return super().__str__()
 
-        for attr in self.openapi_types:
-            value = getattr(self, attr)
-            if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
-            elif hasattr(value, "to_dict"):
-                result[attr] = value.to_dict()
-            elif isinstance(value, dict):
-                result[attr] = dict(map(
-                    lambda item: (item[0], item[1].to_dict())
-                    if hasattr(item[1], "to_dict") else item,
-                    value.items()
-                ))
-            else:
-                result[attr] = value
+    def __eq__(self, other: Any) -> bool:
+        """Check equality between two model instances."""
+        if isinstance(other, Model):
+            return self.dict() == other.dict()
+        return False
 
-        return result
-
-    def to_str(self):
-        """Returns the string representation of the model
-
-        :rtype: str
-        """
-        return pprint.pformat(self.to_dict())
-
-    def __repr__(self):
-        """For `print` and `pprint`"""
-        return self.to_str()
-
-    def __eq__(self, other):
-        """Returns true if both objects are equal"""
-        return self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        """Returns true if both objects are not equal"""
-        return not self == other
+    def __ne__(self, other: Any) -> bool:
+        """Check inequality between two model instances."""
+        return not self.__eq__(other)

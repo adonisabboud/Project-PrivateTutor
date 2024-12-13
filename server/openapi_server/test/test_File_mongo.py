@@ -9,7 +9,7 @@ class TestFileMongoOperations(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Use the existing global MongoDatabase instance
-        cls.collection_name = "Files"
+        cls.collection_name = "pydantic"
         cls.collection = mongo_db.get_collection(cls.collection_name)
 
         # Create and insert the file object
@@ -29,11 +29,11 @@ class TestFileMongoOperations(unittest.TestCase):
         except Exception as e:
             raise RuntimeError(f"Failed to save file to MongoDB: {e}")
 
-    # @classmethod
-    # def tearDownClass(cls):
-    #     # Cleanup: Remove the inserted file
-    #     if hasattr(cls, 'inserted_id') and cls.inserted_id:
-    #         cls.collection.delete_one({'_id': cls.inserted_id})
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup: Remove the inserted file
+        if hasattr(cls, 'inserted_id') and cls.inserted_id:
+            cls.collection.delete_one({'_id': cls.inserted_id})
 
     def test_store_and_extract_file(self):
         # Extract the file using its ID and validate

@@ -20,7 +20,7 @@ class TestPersonDbOperations(unittest.TestCase):
 
         # Create a test person instance
         cls.test_person = Person(
-            id=1,
+            id=None,  # MongoDB will generate the `_id`
             name="John Doe",
             phone="1234567890",
             email="johndoe@example.com",
@@ -35,6 +35,8 @@ class TestPersonDbOperations(unittest.TestCase):
             raise RuntimeError("Failed to save test person to MongoDB.")
 
         cls.inserted_id = result.get("inserted_id")
+        if not cls.inserted_id:
+            raise RuntimeError("Inserted ID is None. Check save_person_to_mongo.")
 
     def test_save_person(self):
         # Save the test person
@@ -43,8 +45,11 @@ class TestPersonDbOperations(unittest.TestCase):
         self.assertIsNotNone(save_result.get("inserted_id"), "No ID was returned for the saved person.")
 
     def test_get_person(self):
+        # Ensure inserted_id is valid
+        self.assertIsNotNone(self.inserted_id, "Inserted ID is None. Setup failed.")
+
         # Retrieve the person using its ID
-        retrieved_person = get_person_from_mongo(self.collection_name, str(self.inserted_id))
+        retrieved_person = get_person_from_mongo(self.collection_name, self.inserted_id)
         self.assertIsNotNone(retrieved_person, "Person not found.")
         self.assertEqual(retrieved_person.name, self.test_person.name, "Name does not match.")
         self.assertEqual(retrieved_person.email, self.test_person.email, "Email does not match.")
@@ -71,6 +76,7 @@ class TestPersonDbOperations(unittest.TestCase):
         # Verify deletion
         deleted_person = get_person_from_mongo(self.collection_name, str(save_result.get("inserted_id")))
         self.assertIsNone(deleted_person, "Person was not deleted.")
+
 
 if __name__ == '__main__':
     unittest.main()

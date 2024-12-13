@@ -1,11 +1,15 @@
+from typing import Optional
+
 from server.openapi_server.models.File import File
 from server.openapi_server.models.Mongo import MongoDatabase
 from server.openapi_server.models.meeting import Meeting
 from server.openapi_server.models.person import Person
 from server.openapi_server.models.student import Student
 from server.openapi_server.models.teacher import Teacher
+from bson.errors import InvalidId
 from bson import ObjectId
-
+from pymongo.collection import Collection
+from pymongo.errors import PyMongoError
 
 
 mongo_db = MongoDatabase()  # Create a global instance
@@ -36,6 +40,8 @@ def load_file_from_mongo(collection_name: str, file_id):
         raise RuntimeError(f"Error loading file from MongoDB collection '{collection_name}': {e}")
 ################################################################
 
+
+
 def save_meeting_to_mongo(collection_name: str, meeting: Meeting) -> dict:
     """
     Saves a Meeting instance to the MongoDB collection.
@@ -45,19 +51,17 @@ def save_meeting_to_mongo(collection_name: str, meeting: Meeting) -> dict:
     :return: A dictionary containing the result of the operation.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
-        document = meeting.to_dict()
+        collection: Collection = mongo_db.get_collection(collection_name)
+        document = meeting.model_dump(by_alias=True)  # Use model_dump instead of dict
 
         if '_id' in document and document['_id']:
-            # Ensure `_id` is an ObjectId
             document['_id'] = ObjectId(document['_id'])
             result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
-            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
         else:
-            # Insert if no `_id` exists
             result = collection.insert_one(document)
-            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
-    except Exception as e:
+
+        return {"acknowledged": result.acknowledged, "modified_count": getattr(result, 'modified_count', 0), "inserted_id": str(getattr(result, 'inserted_id', ''))}
+    except PyMongoError as e:
         raise RuntimeError(f"Error saving meeting to MongoDB in collection '{collection_name}': {e}")
 
 def get_meeting_from_mongo(collection_name: str, meeting_id: str) -> Meeting:
@@ -69,16 +73,11 @@ def get_meeting_from_mongo(collection_name: str, meeting_id: str) -> Meeting:
     :return: The Meeting object, or None if not found.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
-        object_id = ObjectId(meeting_id)
-        document = collection.find_one({'_id': object_id})
-        if document:
-            return Meeting.from_dict(document)
-        else:
-            return None
-    except Exception as e:
+        collection: Collection = mongo_db.get_collection(collection_name)
+        document = collection.find_one({'_id': ObjectId(meeting_id)})
+        return Meeting(**document) if document else None
+    except PyMongoError as e:
         raise RuntimeError(f"Error retrieving meeting from MongoDB in collection '{collection_name}': {e}")
-
 
 def update_meeting_in_mongo(collection_name: str, meeting_id: str, updates: dict) -> dict:
     """
@@ -90,16 +89,11 @@ def update_meeting_in_mongo(collection_name: str, meeting_id: str, updates: dict
     :return: A dictionary containing the result of the operation.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
-        object_id = ObjectId(meeting_id)
-        result = collection.update_one({'_id': object_id}, {'$set': updates})
-        return {
-            "acknowledged": result.acknowledged,
-            "modified_count": result.modified_count
-        }
-    except Exception as e:
+        collection: Collection = mongo_db.get_collection(collection_name)
+        result = collection.update_one({'_id': ObjectId(meeting_id)}, {'$set': updates})
+        return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
+    except PyMongoError as e:
         raise RuntimeError(f"Error updating meeting in MongoDB: {e}")
-
 
 def delete_meeting_from_mongo(collection_name: str, meeting_id: str) -> dict:
     """
@@ -110,66 +104,48 @@ def delete_meeting_from_mongo(collection_name: str, meeting_id: str) -> dict:
     :return: A dictionary containing the result of the operation.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
-        object_id = ObjectId(meeting_id)
-        result = collection.delete_one({'_id': object_id})
-        return {
-            "acknowledged": result.acknowledged,
-            "deleted_count": result.deleted_count
-        }
-    except Exception as e:
+        collection: Collection = mongo_db.get_collection(collection_name)
+        result = collection.delete_one({'_id': ObjectId(meeting_id)})
+        return {"acknowledged": result.acknowledged, "deleted_count": result.deleted_count}
+    except PyMongoError as e:
         raise RuntimeError(f"Error deleting meeting from MongoDB: {e}")
 
 ######################################################################
-from bson import ObjectId
-from server.openapi_server.models.person import Person
-from server.openapi_server.models.DB_utils import mongo_db
-
 
 def save_person_to_mongo(collection_name: str, person: Person) -> dict:
     """
     Saves a Person instance to the MongoDB collection.
 
     :param collection_name: Name of the MongoDB collection.
-    :param person: Person object to save.
+    :param person: Person instance to save.
     :return: A dictionary containing the result of the operation.
     """
     try:
         collection = mongo_db.get_collection(collection_name)
-        document = person.to_dict()
+        document = person.model_dump(by_alias=True, exclude_none=True)
 
-        if '_id' in document and document['_id']:
-            # Ensure `_id` is an ObjectId
-            document['_id'] = ObjectId(document['_id'])
-            result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
-            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
-        else:
-            # Insert if no `_id` exists
-            result = collection.insert_one(document)
-            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
+        result = collection.insert_one(document)
+        return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
     except Exception as e:
-        raise RuntimeError(f"Error saving person to MongoDB in collection '{collection_name}': {e}")
+        raise RuntimeError(f"Error saving person to MongoDB: {e}")
 
-
-def get_person_from_mongo(collection_name: str, person_id: str) -> Person:
+def get_person_from_mongo(collection_name: str, person_id: str) -> Optional[Person]:
     """
     Retrieves a Person instance from the MongoDB collection.
-
-    :param collection_name: Name of the MongoDB collection.
-    :param person_id: ID of the Person to retrieve.
-    :return: The Person object, or None if not found.
     """
     try:
         collection = mongo_db.get_collection(collection_name)
-        object_id = ObjectId(person_id)
-        document = collection.find_one({'_id': object_id})
+        try:
+            object_id = ObjectId(person_id)  # Convert person_id to ObjectId
+        except InvalidId as e:
+            raise RuntimeError(f"Invalid ObjectId: {e}")
+
+        document = collection.find_one({"_id": object_id})
         if document:
-            return Person.from_dict(document)
-        else:
-            return None
+            return Person(**document)  # Pass document directly to the model
+        return None
     except Exception as e:
         raise RuntimeError(f"Error retrieving person from MongoDB in collection '{collection_name}': {e}")
-
 
 def update_person_in_mongo(collection_name: str, person_id: str, updates: dict) -> dict:
     """
@@ -183,10 +159,10 @@ def update_person_in_mongo(collection_name: str, person_id: str, updates: dict) 
     try:
         collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(person_id)
-        result = collection.update_one({'_id': object_id}, {'$set': updates})
+        result = collection.update_one({"_id": object_id}, {"$set": updates})
         return {
             "acknowledged": result.acknowledged,
-            "modified_count": result.modified_count
+            "modified_count": result.modified_count,
         }
     except Exception as e:
         raise RuntimeError(f"Error updating person in MongoDB: {e}")
@@ -203,10 +179,10 @@ def delete_person_from_mongo(collection_name: str, person_id: str) -> dict:
     try:
         collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(person_id)
-        result = collection.delete_one({'_id': object_id})
+        result = collection.delete_one({"_id": object_id})
         return {
             "acknowledged": result.acknowledged,
-            "deleted_count": result.deleted_count
+            "deleted_count": result.deleted_count,
         }
     except Exception as e:
         raise RuntimeError(f"Error deleting person from MongoDB: {e}")
@@ -215,28 +191,30 @@ def delete_person_from_mongo(collection_name: str, person_id: str) -> dict:
 def save_student_to_mongo(collection_name: str, student: Student) -> dict:
     """
     Saves a Student instance to the MongoDB collection.
-
-    :param collection_name: Name of the MongoDB collection.
-    :param student: Student object to save.
-    :return: A dictionary containing the result of the operation.
     """
     try:
         collection = mongo_db.get_collection(collection_name)
-        document = student.to_dict()
-
-        if '_id' in document and document['_id']:
+        document = student.model_dump()
+        if "_id" in document and document["_id"]:
             # Ensure `_id` is an ObjectId
-            document['_id'] = ObjectId(document['_id'])
-            result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
-            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
+            document["_id"] = ObjectId(document["_id"])
+            result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+            return {
+                "acknowledged": result.acknowledged,
+                "modified_count": result.modified_count,
+                "inserted_id": str(document["_id"]) if result.upserted_id else None,
+            }
         else:
             # Insert if no `_id` exists
             result = collection.insert_one(document)
-            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
+            return {
+                "acknowledged": result.acknowledged,
+                "inserted_id": str(result.inserted_id),
+            }
     except Exception as e:
         raise RuntimeError(f"Error saving student to MongoDB in collection '{collection_name}': {e}")
 
-def get_student_from_mongo(collection_name: str, student_id: str) -> Student:
+def get_student_from_mongo(collection_name: str, student_id: str) -> Optional[Student]:
     """
     Retrieves a Student instance from the MongoDB collection.
 
@@ -249,7 +227,10 @@ def get_student_from_mongo(collection_name: str, student_id: str) -> Student:
         object_id = ObjectId(student_id)
         document = collection.find_one({'_id': object_id})
         if document:
-            return Student.from_dict(document)
+            # Convert '_id' back to a string for compatibility with the Student model
+            document["id"] = str(document["_id"])
+            del document["_id"]
+            return Student.model_validate(document)
         else:
             return None
     except Exception as e:
@@ -285,11 +266,32 @@ def delete_student_from_mongo(collection_name: str, student_id: str) -> dict:
     """
     try:
         collection = mongo_db.get_collection(collection_name)
-        object_id = ObjectId(student_id)
-        result = collection.delete_one({'_id': object_id})
+
+        # Validate ObjectId
+        try:
+            object_id = ObjectId(student_id)
+        except InvalidId:
+            return {
+                "acknowledged": False,
+                "error": f"Invalid ObjectId: {student_id}"
+            }
+
+        # Perform the delete operation
+        result = collection.delete_one({"_id": object_id})
+
+        # Check if a document was deleted
+        if result.deleted_count == 0:
+            return {
+                "acknowledged": result.acknowledged,
+                "deleted_count": result.deleted_count,
+                "error": "No student found with the provided ID."
+            }
+
+        # Success response
         return {
             "acknowledged": result.acknowledged,
-            "deleted_count": result.deleted_count
+            "deleted_count": result.deleted_count,
+            "message": "Student deleted successfully."
         }
     except Exception as e:
         raise RuntimeError(f"Error deleting student from MongoDB: {e}")
@@ -307,9 +309,8 @@ def save_teacher_to_mongo(collection_name: str, teacher: Teacher) -> dict:
     :return: A dictionary containing the result of the operation.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
-        document = teacher.to_dict()
-
+        collection: Collection = mongo_db.get_collection(collection_name)
+        document = teacher.model_dump()
         if '_id' in document and document['_id']:
             # Ensure `_id` is an ObjectId
             document['_id'] = ObjectId(document['_id'])
@@ -317,10 +318,12 @@ def save_teacher_to_mongo(collection_name: str, teacher: Teacher) -> dict:
             return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
         else:
             # Insert if no `_id` exists
+            document.pop('_id', None)  # Ensure no invalid `_id` field
             result = collection.insert_one(document)
             return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
     except Exception as e:
         raise RuntimeError(f"Error saving teacher to MongoDB in collection '{collection_name}': {e}")
+
 
 def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> Teacher:
     """
@@ -331,15 +334,17 @@ def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> Teacher:
     :return: The Teacher object, or None if not found.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
+        collection: Collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(teacher_id)
         document = collection.find_one({'_id': object_id})
         if document:
-            return Teacher.from_dict(document)
+            document['id'] = str(document.pop('_id'))  # Convert ObjectId back to string for Pydantic
+            return Teacher.model_validate(document)
         else:
             return None
     except Exception as e:
         raise RuntimeError(f"Error retrieving teacher from MongoDB in collection '{collection_name}': {e}")
+
 
 def update_teacher_in_mongo(collection_name: str, teacher_id: str, updates: dict) -> dict:
     """
@@ -351,7 +356,7 @@ def update_teacher_in_mongo(collection_name: str, teacher_id: str, updates: dict
     :return: A dictionary containing the result of the operation.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
+        collection: Collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(teacher_id)
         result = collection.update_one({'_id': object_id}, {'$set': updates})
         return {
@@ -371,7 +376,7 @@ def delete_teacher_from_mongo(collection_name: str, teacher_id: str) -> dict:
     :return: A dictionary containing the result of the operation.
     """
     try:
-        collection = mongo_db.get_collection(collection_name)
+        collection: Collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(teacher_id)
         result = collection.delete_one({'_id': object_id})
         return {
@@ -380,7 +385,6 @@ def delete_teacher_from_mongo(collection_name: str, teacher_id: str) -> dict:
         }
     except Exception as e:
         raise RuntimeError(f"Error deleting teacher from MongoDB: {e}")
-
 
 #################################################################
 def save_to_mongo(collection_name: str, data):

@@ -16,7 +16,7 @@ def get_all_meetings():
     try:
         collection = mongo_db.get_collection("meetings")
         meetings = list(collection.find({}, {'_id': 0}))  # Exclude MongoDB's `_id` field
-        return [Meeting.from_dict(meeting) for meeting in meetings]
+        return [Meeting.parse_obj(meeting) for meeting in meetings]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

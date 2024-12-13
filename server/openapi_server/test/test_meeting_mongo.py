@@ -1,21 +1,13 @@
 import unittest
 from datetime import datetime
-from bson import ObjectId
-
-from server.openapi_server.models.DB_utils import (
-    save_meeting_to_mongo,
-    get_meeting_from_mongo,
-    update_meeting_in_mongo,
-    delete_meeting_from_mongo,
-    mongo_db
-)
+from server.openapi_server.models.DB_utils import *
 from server.openapi_server.models.meeting import Meeting
 
 
 class TestMeetingDbOperations(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.collection_name = "test_meetings"
+        cls.collection_name = "pydantic test_meetings"
         cls.collection = mongo_db.get_collection(cls.collection_name)
 
     def setUp(self):

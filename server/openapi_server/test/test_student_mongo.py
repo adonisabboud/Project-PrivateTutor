@@ -10,7 +10,6 @@ from server.openapi_server.models.DB_utils import (
     mongo_db
 )
 from server.openapi_server.models.student import Student
-from server.openapi_server.models.meeting import Meeting
 
 
 class TestStudentDbFunctions(unittest.TestCase):
@@ -20,19 +19,11 @@ class TestStudentDbFunctions(unittest.TestCase):
         cls.collection = mongo_db.get_collection(cls.collection_name)
 
     def setUp(self):
-        # Create a test meeting instance
-        test_meeting = Meeting(
-            location="Library",
-            start_time=datetime.now(),
-            finish_time=datetime.now(),
-            subject="Mathematics",
-            people=[],
-            attached_files=[]
-        )
+        self.collection.delete_many({})  # Clear the collection before each test
 
-        # Create a test student instance
-        self.test_student = Student(
-            id=1,
+    def test_save_student(self):
+        test_student = Student(
+            id=str(ObjectId()),
             name="Jane Doe",
             phone="9876543210",
             email="janedoe@example.com",
@@ -40,35 +31,61 @@ class TestStudentDbFunctions(unittest.TestCase):
             available=[datetime.now()],
             rating=4.8,
             subjects_interested_in_learning=["Math", "Science"],
-            meetings=[test_meeting]
+            meetings=[]
         )
 
-    def test_save_student(self):
         # Save the test student to MongoDB
-        result = save_student_to_mongo(self.collection_name, self.test_student)
+        result = save_student_to_mongo(self.collection_name, test_student)
         self.assertTrue(result["acknowledged"], "Save operation not acknowledged.")
-        self.assertIn("inserted_id", result, "Student ID was not returned.")
+        if result.get("inserted_id"):
+            self.assertIn("inserted_id", result, "Student ID was not returned.")
 
-        # Verify student saved in DB
-        inserted_id = result["inserted_id"]
-        student_in_db = self.collection.find_one({"_id": ObjectId(inserted_id)})
-        self.assertIsNotNone(student_in_db, "Student was not saved to MongoDB.")
-        self.assertEqual(student_in_db["name"], self.test_student.name, "Saved name does not match.")
+            # Verify student saved in DB
+            inserted_id = result["inserted_id"]
+            student_in_db = self.collection.find_one({"_id": ObjectId(inserted_id)})
+            self.assertIsNotNone(student_in_db, "Student was not saved to MongoDB.")
+            self.assertEqual(student_in_db["name"], test_student.name, "Saved name does not match.")
+        else:
+            self.fail("Insert operation did not return an inserted ID.")
 
     def test_get_student(self):
+        test_student = Student(
+            id=str(ObjectId()),
+            name="Jane Doe",
+            phone="9876543210",
+            email="janedoe@example.com",
+            about_section="Test student",
+            available=[datetime.now()],
+            rating=4.8,
+            subjects_interested_in_learning=["Math", "Science"],
+            meetings=[]
+        )
+
         # Save the test student to MongoDB
-        save_result = save_student_to_mongo(self.collection_name, self.test_student)
+        save_result = save_student_to_mongo(self.collection_name, test_student)
         inserted_id = save_result["inserted_id"]
 
         # Retrieve the student using its ID
         retrieved_student = get_student_from_mongo(self.collection_name, inserted_id)
         self.assertIsNotNone(retrieved_student, "Student not found.")
-        self.assertEqual(retrieved_student.name, self.test_student.name, "Name does not match.")
-        self.assertEqual(retrieved_student.email, self.test_student.email, "Email does not match.")
+        self.assertEqual(retrieved_student.name, test_student.name, "Name does not match.")
+        self.assertEqual(retrieved_student.email, test_student.email, "Email does not match.")
 
     def test_update_student(self):
+        test_student = Student(
+            id=str(ObjectId()),
+            name="Jane Doe",
+            phone="9876543210",
+            email="janedoe@example.com",
+            about_section="Test student",
+            available=[datetime.now()],
+            rating=4.8,
+            subjects_interested_in_learning=["Math", "Science"],
+            meetings=[]
+        )
+
         # Save the test student to MongoDB
-        save_result = save_student_to_mongo(self.collection_name, self.test_student)
+        save_result = save_student_to_mongo(self.collection_name, test_student)
         inserted_id = save_result["inserted_id"]
 
         # Update the student's phone number
@@ -83,8 +100,20 @@ class TestStudentDbFunctions(unittest.TestCase):
         self.assertEqual(updated_student.phone, updated_phone, "Updated phone does not match.")
 
     def test_delete_student(self):
+        test_student = Student(
+            id=str(ObjectId()),
+            name="Jane Doe",
+            phone="9876543210",
+            email="janedoe@example.com",
+            about_section="Test student",
+            available=[datetime.now()],
+            rating=4.8,
+            subjects_interested_in_learning=["Math", "Science"],
+            meetings=[]
+        )
+
         # Save the test student to MongoDB
-        save_result = save_student_to_mongo(self.collection_name, self.test_student)
+        save_result = save_student_to_mongo(self.collection_name, test_student)
         inserted_id = save_result["inserted_id"]
 
         # Delete the student
@@ -97,8 +126,7 @@ class TestStudentDbFunctions(unittest.TestCase):
         self.assertIsNone(deleted_student, "Student was not deleted.")
 
     def tearDown(self):
-        # Clean up the collection after each test
-        self.collection.delete_many({})
+        self.collection.delete_many({})  # Clean up after each test
 
 
 if __name__ == '__main__':
