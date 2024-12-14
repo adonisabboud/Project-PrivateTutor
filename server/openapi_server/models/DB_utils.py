@@ -1,4 +1,5 @@
-from typing import Optional
+import uuid
+from typing import Optional, Union, List
 
 from server.openapi_server.models.File import File
 from server.openapi_server.models.Mongo import MongoDatabase
@@ -11,6 +12,10 @@ from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
 from pymongo import MongoClient, errors as pymongo_errors
+from passlib.context import CryptContext
+from datetime import datetime
+
+from server.openapi_server.models.user import User
 
 mongo_db = MongoDatabase()  # Create a global instance
 
@@ -441,3 +446,135 @@ def find_one_data(collection_name: str, query):
         return document
     except Exception as e:
         raise RuntimeError(f"Error finding a document in MongoDB collection '{collection_name}': {e}")
+
+
+
+#############################################################################################################################
+
+# Initialize password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def validate_object_id(user_id: str) -> ObjectId:
+    """
+    Validate and convert a string to ObjectId.
+
+    :param user_id: The ID to validate.
+    :return: ObjectId if valid.
+    :raises ValueError: If the ID is invalid.
+    """
+    if not ObjectId.is_valid(user_id):
+        raise ValueError(f"{user_id} is not a valid MongoDB ObjectId.")
+    return ObjectId(user_id)
+
+
+def hash_password(password: str) -> str:
+    """Hash a plain-text password."""
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain-text password against a hashed password."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_user(collection_name: str, user: User) -> str:
+    """
+    Create a new user in the specified MongoDB collection.
+    :param collection_name: Name of the MongoDB collection.
+    :param user: User object to be created.
+    :return: ID of the created user as a string.
+    """
+    try:
+        collection: Collection = mongo_db.get_collection(collection_name)
+        # Ensure email is unique
+        if collection.find_one({"email": user.email}):
+            raise ValueError("A user with this email already exists.")
+
+        # Prepare the user document for insertion
+        user_data = user.model_dump(by_alias=True, exclude_none=True)
+        user_data["password"] = hash_password(user.password)  # Hash the password
+        user_data["created_at"] = datetime.utcnow()  # Add creation timestamp
+
+        result = collection.insert_one(user_data)
+        return str(result.inserted_id)  # Return the ObjectId as a string
+    except PyMongoError as e:
+        raise RuntimeError(f"Error creating user: {e}")
+
+
+def get_user_by_id(collection_name: str, user_id: str) -> Optional[User]:
+    """
+    Fetch a user by their MongoDB ObjectId.
+    """
+    try:
+        object_id = validate_object_id(user_id)
+        collection = mongo_db.get_collection(collection_name)
+        user_doc = collection.find_one({"_id": object_id})  # Query using `_id`
+        if user_doc:
+            return User(**user_doc)  # No need to map `_id` to `id`
+        return None
+    except PyMongoError as e:
+        raise RuntimeError(f"Error fetching user by ID from collection '{collection_name}': {e}")
+
+
+def get_users_by_username(collection_name: str, username: str) -> List[User]:
+    """
+    Retrieve all users with the given username from the specified MongoDB collection.
+    """
+    try:
+        collection = mongo_db.get_collection(collection_name)
+        user_docs = collection.find({"username": username})
+        return [User(**doc) for doc in user_docs]  # No need to map `_id` to `id`
+    except PyMongoError as e:
+        raise RuntimeError(f"Error retrieving users by username from collection '{collection_name}': {e}")
+
+
+def authenticate_user(collection_name: str, email: str, password: str) -> Optional[User]:
+    """
+    Authenticate a user by verifying their email and password.
+    :param collection_name: Name of the MongoDB collection.
+    :param email: Email of the user (unique).
+    :param password: Plain-text password to verify.
+    :return: User object if authentication is successful, otherwise None.
+    """
+    try:
+        collection: Collection = mongo_db.get_collection(collection_name)
+        user_doc = collection.find_one({"email": email})  # Query by email
+        if user_doc and "password" in user_doc and verify_password(password, user_doc["password"]):
+            return User(**user_doc)
+        return None
+    except Exception as e:
+        raise RuntimeError(f"Error during authentication: {e}")
+
+
+def update_user(collection_name: str, user_id: str, updates: dict) -> bool:
+    """
+    Update a user's information.
+    :param collection_name: Name of the MongoDB collection.
+    :param user_id: ObjectId of the user to update.
+    :param updates: Dictionary of fields to update.
+    :return: True if the update was successful, False otherwise.
+    """
+    try:
+        object_id = validate_object_id(user_id)
+        collection = mongo_db.get_collection(collection_name)
+        result = collection.update_one({"_id": object_id}, {"$set": updates})
+        return result.modified_count > 0
+    except (PyMongoError, ValueError) as e:
+        raise RuntimeError(f"Error updating user in collection '{collection_name}': {e}")
+
+
+def delete_user(collection_name: str, user_id: str) -> bool:
+    """
+    Delete a user from the database.
+    :param collection_name: Name of the MongoDB collection.
+    :param user_id: ObjectId of the user to delete.
+    :return: True if the deletion was successful, False otherwise.
+    """
+    try:
+        object_id = validate_object_id(user_id)
+        collection = mongo_db.get_collection(collection_name)
+        result = collection.delete_one({"_id": object_id})
+        return result.deleted_count > 0
+    except (PyMongoError, ValueError) as e:
+        raise RuntimeError(f"Error deleting user from collection '{collection_name}': {e}")

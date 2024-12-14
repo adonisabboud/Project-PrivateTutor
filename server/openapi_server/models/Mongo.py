@@ -20,7 +20,7 @@ class MongoDatabase:
                 raise EnvironmentError("Missing required environment variables.")
 
             MONGO_URI: str = f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
-            cls._instance.client = MongoClient(MONGO_URI)
+            cls._instance.client = MongoClient(MONGO_URI,serverSelectionTimeoutMS=5000)
             cls._instance.db = cls._instance.client[DB_NAME]
             print("Connected to MongoDB successfully.")
         return cls._instance
