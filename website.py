@@ -1,244 +1,155 @@
 import streamlit as st
-import datetime
-import random
+import logging
 
-from server_requests import *  # Assuming this imports the functions like fetch_data and send_data
+from login_register import login, register
+from server_requests import *  # Assuming this imports the necessary backend functions
+from teacher_student_view import *
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def main():
-    # Try to get user ID if the user is logging in
-    if 'user_id' not in st.session_state:
+    # Initialize session state variables
+    if "user_id" not in st.session_state:
         st.session_state.user_id = None
+        st.session_state.profile_type = "Student"  # Default profile type
+        st.session_state.user_authenticated = False  # Whether the user is logged in or not
 
-    st.title("Meeting Scheduler")
+    # Render header and profile toggle bar
+    render_header()
 
-    # Check if the user wants to log in or create a new profile
-    user_id_input = st.text_input("Enter Your ID (if you have one)", help="Enter your ID to log in to your existing profile.")
-    login_button = st.button("Login")
+    # Show login/register screen if the user is not authenticated
+    if not st.session_state.user_authenticated:
+        render_authentication_page()
+    else:
+        # Render the main app based on the selected profile type
+        if st.session_state.profile_type == "Student":
+            student_view()
+        elif st.session_state.profile_type == "Teacher":
+            teacher_view()
 
-    # Login action: Fetch the user profile by ID
-    if login_button:
-        user_profile = fetch_data(f"/users/{user_id_input}")
-        if user_profile:
-            st.session_state.user_id = user_id_input
-            st.success(f"Welcome back! You are logged in with ID: {st.session_state.user_id}")
-            st.write("You can now proceed to access your profile.")
-        else:
-            st.error("User ID not found. Please create a new profile.")
 
-    # If no login, allow the user to create a new profile
-    if not st.session_state.user_id:
-        # Auto-generate user ID for new users
-        st.session_state.user_id = str(random.randint(1000, 9999)) + str(int(datetime.datetime.now().timestamp()))
+def render_header():
+    """Render the top bar with the profile toggle."""
+    st.markdown(
+        """
+        <style>
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .toggle-btn {
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-weight: bold;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        # Create profile
-        create_button = st.button("Create New Profile")
-        if create_button:
-            # Collect user details for profile creation
-            user_name = st.text_input("Enter Your Name", help="Enter your full name.")
-            profile_type = st.radio("Select Profile", ["Student", "Teacher"], key="profile_toggle")
+    col1, col2 = st.columns([9, 1])  # Split screen: 90% width for title, 10% for toggle
+    with col1:
+        st.title("Student-Teacher Meeting Scheduler")
+    with col2:
+        if st.session_state.user_authenticated:
+            if st.button(f"{st.session_state.profile_type}"):
+                toggle_profile()
 
-            # Call create_user function to create a new profile
-            if create_user(st.session_state.user_id, user_name, profile_type):
-                st.success(f"New profile created! Your User ID is: {st.session_state.user_id}")
-                st.warning("Please save your User ID. You'll need it next time to access your profile.")
-                st.write("You are now registered as a new user. Please remember your ID for future logins.")
+def render_header():
+    """Render the top bar with the profile toggle."""
+    profile_color = "#007bff" if st.session_state.profile_type == "Student" else "#28a745"
+    st.markdown(
+        f"""
+        <style>
+        .header-bar {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: {profile_color};
+            padding: 10px 20px;
+            color: white;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+        }}
+        .toggle-btn {{
+            cursor: pointer;
+            background-color: white;
+            color: {profile_color};
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-weight: bold;
+        }}
+        </style>
+        <div class="header-bar">
+            <div>Student-Teacher Meeting Scheduler</div>
+            <button class="toggle-btn" onclick="window.location.reload()">{st.session_state.profile_type}</button>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Display the user ID always at the top of the page
-    st.write(f"### Your User ID: {st.session_state.user_id}")
 
-    # Simple profile toggle at the top
-    profile_type = st.radio("Select Your Profile", ["Student", "Teacher"], key="profile_toggle")
+def render_authentication_page():
+    """Render the login and registration page."""
+    st.subheader("Welcome! Please log in or register.")
+    auth_action = st.radio("Select Action", ["Login", "Register"], key="auth_action")
 
-    # Change the color based on the profile selected
-    if profile_type == "Student":
-        st.markdown(
-            """
-            <style>
-                .main {
-                    background-color: #E0F7FA;  /* Light Cyan for Student */
-                }
-                .stButton>button {
-                    background-color: #00BCD4;
-                    color: white;
-                    font-weight: bold;
-                }
-            </style>
-            """, unsafe_allow_html=True
-        )
-    elif profile_type == "Teacher":
-        st.markdown(
-            """
-            <style>
-                .main {
-                    background-color: #E8F5E9;  /* Light Green for Teacher */
-                }
-                .stButton>button {
-                    background-color: #388E3C;
-                    color: white;
-                    font-weight: bold;
-                }
-            </style>
-            """, unsafe_allow_html=True
-        )
+    if auth_action == "Login":
+        email = st.text_input("Email", placeholder="Enter your email")
+        password = st.text_input("Password", type="password", placeholder="Enter your password")
 
-    # Handle different views for student or teacher profile
-    if profile_type == "Student":
-        student_menu = ["View Teachers", "Request a Meeting", "Manage Meetings"]
-        choice = st.sidebar.selectbox("Select an Option", student_menu)
-
-        if choice == "View Teachers":
-            st.subheader("Browse Teachers")
-            teachers = fetch_data("/teachers/")
-            if teachers:
-                for teacher in teachers:
-                    st.write(f"**Name:** {teacher.get('name', 'N/A')}")
-                    st.write(f"**Subjects:** {', '.join(teacher.get('subjects', []))}")
-                    st.write(f"**Email:** {teacher.get('email', 'N/A')}")
-                    teacher_id = teacher.get("id")
-                    # Button to request a meeting
-                    if st.button(f"Request Meeting with {teacher.get('name')}", key=teacher_id):
-                        request_meeting_with_teacher(teacher_id)
-                    st.write("---")
+        if st.button("Login"):
+            if not email or not password:
+                st.warning("Please fill in both email and password.")
             else:
-                st.error("Failed to load teachers data. Please try again later.")
+                user_profile = login(email, password)
+                if user_profile:
+                    st.session_state.user_id = user_profile.get("id")
+                    st.session_state.profile_type = user_profile.get("roles", ["Student"])[0]
+                    st.session_state.user_authenticated = True
+                    st.success(f"Welcome back, {user_profile.get('name', 'User')}!")
+                else:
+                    st.error("Invalid email or password. Please try again.")
 
-        elif choice == "Request a Meeting":
-            st.subheader("Request a Meeting with a Teacher")
+    elif auth_action == "Register":
+        full_name = st.text_input("Full Name", placeholder="Enter your full name")
+        username = st.text_input("Username", placeholder="Enter your username")
+        email = st.text_input("Email", placeholder="Enter your email")
+        password = st.text_input("Password", type="password", placeholder="Enter your password")
+        profile_type = st.radio("Profile Type", ["Student", "Teacher"], key="profile_type")
 
-            teachers = fetch_data("/teachers/")
-            teacher_names = [teacher.get('name') for teacher in teachers]
-
-            meeting_subject = st.text_input("Meeting Subject", help="Enter the subject of the meeting.")
-            meeting_location = st.text_input("Meeting Location", help="Enter the meeting location.")
-
-            # Split datetime input into separate date and time inputs
-            start_date = st.date_input("Start Date", datetime.date.today())
-            start_time = st.time_input("Start Time", datetime.time(9, 0))  # Default time 09:00 AM
-            end_date = st.date_input("End Date", datetime.date.today())
-            end_time = st.time_input("End Time", datetime.time(10, 0))  # Default time 10:00 AM
-
-            selected_teacher = st.selectbox("Select a Teacher", teacher_names)
-            attached_files = st.file_uploader("Upload Files (Optional)", accept_multiple_files=True)
-
-            # Combine date and time for start and end times
-            start_datetime = datetime.datetime.combine(start_date, start_time)
-            end_datetime = datetime.datetime.combine(end_date, end_time)
-
-            # Ensure that start time is before end time
-            if start_datetime >= end_datetime:
-                st.error("Start time must be before end time.")
+        if st.button("Register"):
+            if not full_name or not username or not email or not password:
+                st.warning("All fields are required for registration. Please fill out all fields.")
             else:
-                if st.button("Send Meeting Request"):
-                    teacher = next((t for t in teachers if t.get('name') == selected_teacher), None)
-                    if teacher:
-                        files_metadata = [{"file_name": file.name, "file_type": file.type} for file in attached_files]
+                user_profile = register(full_name, username, email, password, profile_type)
+                if user_profile:
+                    st.session_state.user_id = user_profile.get("id")
+                    st.session_state.profile_type = user_profile.get("roles", ["Student"])[0]
+                    st.session_state.user_authenticated = True
+                    st.success(f"Welcome, {user_profile.get('name', 'User')}! You are now logged in.")
+                else:
+                    st.error("Registration failed. Please try again.")
 
-                        meeting_data = {
-                            "location": meeting_location,
-                            "start_time": start_datetime.isoformat(),
-                            "finish_time": end_datetime.isoformat(),
-                            "subject": meeting_subject,
-                            "people": [{"name": teacher['name'], "role": "Teacher"}],
-                            "attached_files": files_metadata,
-                        }
 
-                        result = send_data("/meetings/", meeting_data)
-                        if result:
-                            st.success("Your meeting request has been successfully sent!")
-                        else:
-                            st.error("Failed to send meeting request. Please try again later.")
+def toggle_profile():
+    """Toggle between Student and Teacher profiles."""
+    st.session_state.profile_type = "Teacher" if st.session_state.profile_type == "Student" else "Student"
+    logging.info(f"Profile type switched to {st.session_state.profile_type}")
+    st.experimental_rerun()  # Rerun the app to reflect the change
 
-        elif choice == "Manage Meetings":
-            st.subheader("Your Meetings")
 
-            meetings = fetch_data("/meetings/")
-            student_name = st.text_input("Enter Your Name to Filter Meetings")
-
-            if student_name and meetings:
-                student_meetings = [
-                    meeting for meeting in meetings if
-                    any(p.get("name") == student_name for p in meeting.get("people", []))
-                ]
-
-                for meeting in student_meetings:
-                    st.write(f"**Subject:** {meeting.get('subject', 'N/A')}")
-                    st.write(f"**Location:** {meeting.get('location', 'N/A')}")
-                    st.write(f"**Start Time:** {meeting.get('start_time', 'N/A')}")
-                    st.write(f"**End Time:** {meeting.get('finish_time', 'N/A')}")
-                    st.write("---")
-
-                    if 'id' in meeting:
-                        action = st.radio(f"Actions for {meeting.get('subject')}", ["Cancel"])
-                        if action == "Cancel" and st.button(f"Cancel Meeting: {meeting.get('subject')}", key=meeting['id']):
-                            update_result = send_data(f"/meetings/{meeting['id']}", {"status": "Canceled"}, method="PUT")
-                            if update_result:
-                                st.success(f"The meeting {meeting.get('subject')} has been canceled.")
-                        else:
-                            st.warning("Unable to perform action.")
-
-    elif profile_type == "Teacher":
-        teacher_menu = ["Manage Your Meetings", "View Students", "About Me"]
-        choice = st.sidebar.selectbox("Select an Option", teacher_menu)
-
-        if choice == "Manage Your Meetings":
-            st.subheader("Your Meetings")
-
-            meetings = fetch_data("/meetings/")
-            teacher_name = st.text_input("Enter Your Name to Filter Meetings")
-
-            if teacher_name and meetings:
-                teacher_meetings = [
-                    meeting for meeting in meetings if
-                    any(p.get("name") == teacher_name for p in meeting.get("people", []))
-                ]
-
-                for meeting in teacher_meetings:
-                    st.write(f"**Subject:** {meeting.get('subject', 'N/A')}")
-                    st.write(f"**Location:** {meeting.get('location', 'N/A')}")
-                    st.write(f"**Start Time:** {meeting.get('start_time', 'N/A')}")
-                    st.write(f"**End Time:** {meeting.get('finish_time', 'N/A')}")
-                    st.write("---")
-
-                    if 'id' in meeting:
-                        action = st.radio(f"Actions for {meeting.get('subject')}", ["Approve", "Deny", "Cancel"])
-                        if action == "Cancel" and st.button(f"Cancel Meeting: {meeting.get('subject')}", key=meeting['id']):
-                            update_result = send_data(f"/meetings/{meeting['id']}", {"status": "Canceled"}, method="PUT")
-                            if update_result:
-                                st.success(f"The meeting {meeting.get('subject')} has been canceled.")
-                        elif action == "Approve" and st.button(f"Approve Meeting: {meeting.get('subject')}", key=meeting['id']):
-                            update_result = send_data(f"/meetings/{meeting['id']}", {"status": "Approved"}, method="PUT")
-                            if update_result:
-                                st.success(f"The meeting {meeting.get('subject')} has been approved.")
-                        elif action == "Deny" and st.button(f"Deny Meeting: {meeting.get('subject')}", key=meeting['id']):
-                            update_result = send_data(f"/meetings/{meeting['id']}", {"status": "Denied"}, method="PUT")
-                            if update_result:
-                                st.success(f"The meeting {meeting.get('subject')} has been denied.")
-
-        elif choice == "View Students":
-            st.subheader("All Students")
-            students = fetch_data("/students/")
-
-            if students:
-                for student in students:
-                    st.write(f"**Name:** {student.get('name', 'N/A')}")
-                    st.write(f"**Email:** {student.get('email', 'N/A')}")
-                    st.write("---")
-
-        elif choice == "About Me":
-            st.subheader("Update Your Profile")
-            about_me = st.text_area("About Me", "Write a brief description of yourself...")
-
-            if st.button("Update Profile"):
-                updated_profile_data = {
-                    "name": user_name,
-                    "id": st.session_state.user_id,
-                    "profile_type": profile_type,
-                    "about_me": about_me,
-                }
-
-                result = send_data("/update_profile/", updated_profile_data, method="PUT")
-                if result:
-                    st.success("Profile updated successfully!")
 if __name__ == "__main__":
     main()
