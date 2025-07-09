@@ -40,7 +40,7 @@ def get_student_by_id(student_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving student: {str(e)}")
 
-@students_router.post("/", response_model=dict)
+@students_router.post("/", response_model=Student)
 def create_student(student: Student):
     """Create a new student."""
     try:

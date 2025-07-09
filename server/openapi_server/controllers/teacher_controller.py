@@ -1,6 +1,7 @@
 from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException
 from pymongo.errors import OperationFailure
+from bson import ObjectId
 
 from server.openapi_server.models.DB_utils import (
     save_teacher_to_mongo,
@@ -29,11 +30,11 @@ def create_teacher(teacher: Teacher):
     try:
         result = save_teacher_to_mongo('teachers', teacher)
         if result.get("acknowledged"):
-            teacher.id = str(result.get("inserted_id"))  # Set the generated ID in the Teacher object
-            return teacher
-        raise HTTPException(status_code=500, detail="Failed to create teacher")
+            return {"message": "Teacher created successfully", "id": str(result.get("inserted_id"))}
+        raise HTTPException(status_code=500, detail="Failed to create student.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error creating student: {str(e)}")
+
 
 @teachers_router.put("/{id}", response_model=Teacher)
 def update_teacher(id: str, teacher: Teacher):

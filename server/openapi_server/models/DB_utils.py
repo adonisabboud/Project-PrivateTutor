@@ -210,24 +210,20 @@ def save_student_to_mongo(collection_name: str, student: Student) -> dict:
     try:
         collection = mongo_db.get_collection(collection_name)
         document = student.model_dump()
-        if "_id" in document and document["_id"]:
-            # Ensure `_id` is an ObjectId
-            document["_id"] = ObjectId(document["_id"])
-            result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
-            return {
-                "acknowledged": result.acknowledged,
-                "modified_count": result.modified_count,
-                "inserted_id": str(document["_id"]) if result.upserted_id else None,
-            }
-        else:
-            # Insert if no `_id` exists
-            result = collection.insert_one(document)
-            return {
-                "acknowledged": result.acknowledged,
-                "inserted_id": str(result.inserted_id),
-            }
+
+        # ✅ Force MongoDB _id to be the same as the user_id
+        document["_id"] = ObjectId(document["id"])
+
+        result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+        return {
+            "acknowledged": result.acknowledged,
+            "modified_count": result.modified_count,
+            "inserted_id": str(document["_id"]) if result.upserted_id else None,
+        }
+
     except Exception as e:
         raise RuntimeError(f"Error saving student to MongoDB in collection '{collection_name}': {e}")
+
 
 
 def get_student_from_mongo(collection_name: str, student_id: str) -> Optional[Student]:
@@ -319,24 +315,21 @@ def delete_student_from_mongo(collection_name: str, student_id: str) -> dict:
 def save_teacher_to_mongo(collection_name: str, teacher: Teacher) -> dict:
     """
     Saves a Teacher instance to the MongoDB collection.
-
-    :param collection_name: Name of the MongoDB collection.
-    :param teacher: Teacher object to save.
-    :return: A dictionary containing the result of the operation.
     """
     try:
-        collection: Collection = mongo_db.get_collection(collection_name)
+        collection = mongo_db.get_collection(collection_name)
         document = teacher.model_dump()
-        if '_id' in document and document['_id']:
-            # Ensure `_id` is an ObjectId
-            document['_id'] = ObjectId(document['_id'])
-            result = collection.replace_one({'_id': document['_id']}, document, upsert=True)
-            return {"acknowledged": result.acknowledged, "modified_count": result.modified_count}
-        else:
-            # Insert if no `_id` exists
-            document.pop('_id', None)  # Ensure no invalid `_id` field
-            result = collection.insert_one(document)
-            return {"acknowledged": result.acknowledged, "inserted_id": str(result.inserted_id)}
+
+        # ✅ Force MongoDB _id to be the same as the user_id
+        document["_id"] = ObjectId(document["id"])
+
+        result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+        return {
+            "acknowledged": result.acknowledged,
+            "modified_count": result.modified_count,
+            "inserted_id": str(document["_id"]) if result.upserted_id else None,
+        }
+
     except Exception as e:
         raise RuntimeError(f"Error saving teacher to MongoDB in collection '{collection_name}': {e}")
 
@@ -384,7 +377,8 @@ def update_teacher_in_mongo(collection_name: str, teacher_id: str, updates: dict
             object_id = ObjectId(teacher_id)
         except InvalidId:
             raise HTTPException(status_code=400, detail="Invalid ObjectId format")
-
+        # Remove fields that should not be updated directly
+        updates.pop("id", None)
         # Perform the update operation
         result = collection.update_one({'_id': object_id}, {'$set': updates})
 

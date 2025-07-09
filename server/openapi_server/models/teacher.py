@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+from .meeting_summary import MeetingSummary
+from pydantic import BaseModel, Field, EmailStr
 
 
 class Teacher(BaseModel):
@@ -13,7 +14,8 @@ class Teacher(BaseModel):
     rating: Optional[float] = Field(None, ge=0, le=5, description="Rating (0-5).")
     subjects_to_teach: List[str] = Field(default_factory=list, description="Subjects the teacher can teach.")
     hourly_rate: Optional[float] = Field(None, description="Hourly teaching rate.")
-    meetings: List[dict] = Field(default_factory=list, description="List of meetings.")
+    meetings: List[MeetingSummary] = Field(default_factory=list, description="List of meetings.")
+
 
     class Config:
         schema_extra = {
