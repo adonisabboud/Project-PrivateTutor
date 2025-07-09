@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class MongoDatabase:
     _instance = None
 
@@ -18,14 +19,12 @@ class MongoDatabase:
 
             if not all([DB_USER, DB_PASSWORD, DB_CLUSTER, DB_NAME]):
                 raise EnvironmentError("Missing required environment variables.")
-
-            MONGO_URI: str = f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
-            cls._instance.client = MongoClient(MONGO_URI,serverSelectionTimeoutMS=5000)
+            MONGO_URI = f"mongodb+srv://{DB_USER}:{DB_PASSWORD}@{DB_CLUSTER}/{DB_NAME}?retryWrites=true&w=majority"
+            print("URI:", MONGO_URI)
+            cls._instance.client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
             cls._instance.db = cls._instance.client[DB_NAME]
             print("Connected to MongoDB successfully.")
         return cls._instance
 
     def get_collection(self, collection_name):
         return self.db[collection_name]
-
-

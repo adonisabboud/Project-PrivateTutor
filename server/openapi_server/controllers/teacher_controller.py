@@ -1,4 +1,7 @@
+from bson.errors import InvalidId
 from fastapi import APIRouter, HTTPException
+from pymongo.errors import OperationFailure
+
 from server.openapi_server.models.DB_utils import (
     save_teacher_to_mongo,
     get_teacher_from_mongo,
@@ -35,11 +38,20 @@ def create_teacher(teacher: Teacher):
 @teachers_router.put("/{id}", response_model=Teacher)
 def update_teacher(id: str, teacher: Teacher):
     """Update a teacher's details."""
+    # Validate ID format
+    if not ObjectId.is_valid(id):
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
     try:
         result = update_teacher_in_mongo('teachers', id, teacher.dict())
         if result.get("acknowledged") and result.get("modified_count"):
             return teacher
-        raise HTTPException(status_code=404, detail="Teacher not found")
+        else:
+            raise HTTPException(status_code=404, detail="Teacher not found or no changes made")
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+    except OperationFailure as e:
+        raise HTTPException(status_code=500, detail=f"MongoDB Operation Failure: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

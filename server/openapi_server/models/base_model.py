@@ -1,3 +1,4 @@
+from bson import ObjectId
 from pydantic import BaseModel
 from abc import ABC
 from typing import Any, Dict, Type, TypeVar
@@ -14,6 +15,7 @@ class Model(BaseModel, ABC):
         # Customize JSON serialization
         json_encoders = {
             # Add custom serialization logic if needed
+            ObjectId: str
         }
 
     @classmethod
