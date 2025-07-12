@@ -1,7 +1,7 @@
-from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, EmailStr
 from bson import ObjectId
+from .time_interval import TimeInterval
 
 
 class Student(BaseModel):
@@ -13,12 +13,8 @@ class Student(BaseModel):
     name: str = Field(..., description="Name of the student.")
     phone: Optional[str] = Field(None, description="Phone number of the student.")
     email: Optional[EmailStr] = Field(None, description="Email address of the student.")
-    about_section: Optional[str] = Field(
-        None, description="Short description or bio of the student."
-    )
-    available: Optional[List[datetime]] = Field(
-        default_factory=list, description="Availability times of the student."
-    )
+    about_section: Optional[str] = Field(None, description="Short description or bio of the student.")
+    available: List[TimeInterval] = Field(default_factory=list, description="List of available time intervals.")
     rating: Optional[float] = Field(
         None,
         ge=0,

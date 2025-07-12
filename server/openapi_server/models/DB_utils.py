@@ -215,39 +215,28 @@ def save_student_to_mongo(collection_name: str, student: Student) -> dict:
         document["_id"] = ObjectId(document["id"])
 
         result = collection.replace_one({"_id": document["_id"]}, document, upsert=True)
+
         return {
             "acknowledged": result.acknowledged,
             "modified_count": result.modified_count,
-            "inserted_id": str(document["_id"]) if result.upserted_id else None,
+            "inserted_id": str(document["_id"]),  # ✅ Always return the ID, even on update
         }
 
     except Exception as e:
         raise RuntimeError(f"Error saving student to MongoDB in collection '{collection_name}': {e}")
 
 
-
-def get_student_from_mongo(collection_name: str, student_id: str) -> Optional[Student]:
-    """
-    Retrieves a Student instance from the MongoDB collection.
-
-    :param collection_name: Name of the MongoDB collection.
-    :param student_id: ID of the Student to retrieve.
-    :return: The Student object, or None if not found.
-    """
+def get_student_from_mongo(collection_name: str, student_id: str) -> Optional[dict]:
     try:
-        collection = mongo_db.get_collection(collection_name)
+        collection: Collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(student_id)
         document = collection.find_one({'_id': object_id})
         if document:
-            # Convert '_id' back to a string for compatibility with the Student model
-            document["id"] = str(document["_id"])
-            del document["_id"]
-            return Student.model_validate(document)
-        else:
-            return None
+            document['id'] = str(document.pop('_id'))  # Make it frontend-friendly
+            return document  # ✅ plain dict
+        return None
     except Exception as e:
         raise RuntimeError(f"Error retrieving student from MongoDB in collection '{collection_name}': {e}")
-
 
 def update_student_in_mongo(collection_name: str, student_id: str, updates: dict) -> dict:
     """
@@ -327,32 +316,30 @@ def save_teacher_to_mongo(collection_name: str, teacher: Teacher) -> dict:
         return {
             "acknowledged": result.acknowledged,
             "modified_count": result.modified_count,
-            "inserted_id": str(document["_id"]) if result.upserted_id else None,
+            "inserted_id": str(document["_id"]),  # ✅ Always include this
         }
 
     except Exception as e:
         raise RuntimeError(f"Error saving teacher to MongoDB in collection '{collection_name}': {e}")
 
 
-def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> Optional[Teacher]:
+def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> Optional[dict]:
     """
-    Retrieves a Teacher instance from the MongoDB collection.
-
-    :param collection_name: Name of the MongoDB collection.
-    :param teacher_id: ID of the Teacher to retrieve.
-    :return: The Teacher object, or None if not found.
+    Retrieves a teacher document from the MongoDB collection as a plain dictionary.
     """
     try:
         collection: Collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(teacher_id)
         document = collection.find_one({'_id': object_id})
         if document:
-            document['id'] = str(document.pop('_id'))  # Convert ObjectId back to string for Pydantic
-            return Teacher.model_validate(document)
+            document['id'] = str(document.pop('_id'))  # Make MongoDB ID compatible
+            return document  # ✅ return plain dict
         else:
             return None
     except Exception as e:
-        raise RuntimeError(f"Error retrieving teacher from MongoDB in collection '{collection_name}': {e}")
+        raise RuntimeError(
+            f"Error retrieving teacher from MongoDB in collection '{collection_name}': {e}"
+        )
 
 
 def update_teacher_in_mongo(collection_name: str, teacher_id: str, updates: dict) -> dict:

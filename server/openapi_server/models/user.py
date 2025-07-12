@@ -2,6 +2,7 @@ from typing import Optional, Union, List
 from datetime import datetime
 from bson import ObjectId
 from pydantic import BaseModel, Field, EmailStr
+from .time_interval import TimeInterval
 
 
 class User(BaseModel):
@@ -18,7 +19,7 @@ class User(BaseModel):
     name: Optional[str] = Field(None, description="The full name of the user.")
     phone: Optional[str] = Field(None, description="The phone number of the user.")
     about_section: Optional[str] = Field(None, description="The 'About' section for the user.")
-    available: Optional[List[datetime]] = Field(
+    available: Optional[List[TimeInterval]] = Field(
         default_factory=list, description="Availability times for meetings."
     )
     rating: Optional[float] = Field(None, description="Average rating, on a scale of 0 to 5.")
