@@ -1,7 +1,7 @@
-from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel
 from bson import ObjectId
+from pydantic import BaseModel, Field
+from datetime import datetime
 
 from .person import Person
 from .File import File
@@ -49,3 +49,4 @@ class Meeting(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
