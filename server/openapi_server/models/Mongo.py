@@ -28,3 +28,8 @@ class MongoDatabase:
 
     def get_collection(self, collection_name):
         return self.db[collection_name]
+
+
+def validate_object_id():
+
+    return None

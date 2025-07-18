@@ -1,8 +1,6 @@
-import uuid
-from typing import Optional, Union, List
-
+import typing
+from server.openapi_server.models.Mongo import MongoDatabase, validate_object_id
 from server.openapi_server.models.File import File
-from server.openapi_server.models.Mongo import MongoDatabase
 from server.openapi_server.models.meeting import Meeting
 from server.openapi_server.models.person import Person
 from server.openapi_server.models.student import Student
@@ -11,7 +9,7 @@ from bson.errors import InvalidId
 from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
-from pymongo import MongoClient, errors as pymongo_errors
+from pymongo import errors as pymongo_errors
 from passlib.context import CryptContext
 from datetime import datetime
 from pymongo.errors import OperationFailure, WriteError
@@ -142,7 +140,7 @@ def save_person_to_mongo(collection_name: str, person: Person) -> dict:
         raise RuntimeError(f"Error saving person to MongoDB: {e}")
 
 
-def get_person_from_mongo(collection_name: str, person_id: str) -> Optional[Person]:
+def get_person_from_mongo(collection_name: str, person_id: str) -> typing.Optional[Person]:
     """
     Retrieves a Person instance from the MongoDB collection.
     """
@@ -226,7 +224,7 @@ def save_student_to_mongo(collection_name: str, student: Student) -> dict:
         raise RuntimeError(f"Error saving student to MongoDB in collection '{collection_name}': {e}")
 
 
-def get_student_from_mongo(collection_name: str, student_id: str) -> Optional[dict]:
+def get_student_from_mongo(collection_name: str, student_id: str) -> typing.Optional[dict]:
     try:
         collection: Collection = mongo_db.get_collection(collection_name)
         object_id = ObjectId(student_id)
@@ -237,6 +235,7 @@ def get_student_from_mongo(collection_name: str, student_id: str) -> Optional[di
         return None
     except Exception as e:
         raise RuntimeError(f"Error retrieving student from MongoDB in collection '{collection_name}': {e}")
+
 
 def update_student_in_mongo(collection_name: str, student_id: str, updates: dict) -> dict:
     """
@@ -323,7 +322,7 @@ def save_teacher_to_mongo(collection_name: str, teacher: Teacher) -> dict:
         raise RuntimeError(f"Error saving teacher to MongoDB in collection '{collection_name}': {e}")
 
 
-def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> Optional[dict]:
+def get_teacher_from_mongo(collection_name: str, teacher_id: str) -> typing.Optional[dict]:
     """
     Retrieves a teacher document from the MongoDB collection as a plain dictionary.
     """
@@ -523,22 +522,16 @@ def create_user(collection_name: str, user: User) -> str:
         raise RuntimeError(f"Error creating user: {e}")
 
 
-def get_user_by_id(collection_name: str, user_id: str) -> Optional[User]:
-    """
-    Fetch a user by their MongoDB ObjectId.
-    """
-    try:
-        object_id = validate_object_id(user_id)
-        collection = mongo_db.get_collection(collection_name)
-        user_doc = collection.find_one({"_id": object_id})  # Query using `_id`
-        if user_doc:
-            return User(**user_doc)  # No need to map `_id` to `id`
+def get_user_by_id(collection_name: str, user_id: str) -> typing.Optional[User]:
+    oid = ObjectId(user_id)  # you already validated above
+    doc = mongo_db.get_collection(collection_name).find_one({"_id": oid})
+    if not doc:
         return None
-    except PyMongoError as e:
-        raise RuntimeError(f"Error fetching user by ID from collection '{collection_name}': {e}")
+    # Pydantic will map "_id" → id for you thanks to alias in your User model
+    return User(**doc)
 
 
-def get_users_by_username(collection_name: str, username: str) -> List[User]:
+def get_users_by_username(collection_name: str, username: str) -> typing.List[User]:
     """
     Retrieve all users with the given username from the specified MongoDB collection.
     """
@@ -550,7 +543,7 @@ def get_users_by_username(collection_name: str, username: str) -> List[User]:
         raise RuntimeError(f"Error retrieving users by username from collection '{collection_name}': {e}")
 
 
-def authenticate_user(collection_name: str, email: str, password: str) -> Optional[User]:
+def authenticate_user(collection_name: str, email: str, password: str) -> typing.Optional[User]:
     """
     Authenticate a user by verifying their email and password.
     :param collection_name: Name of the MongoDB collection.
@@ -574,13 +567,20 @@ def update_user(collection_name: str, user_id: str, updates: dict) -> bool:
     :param collection_name: Name of the MongoDB collection.
     :param user_id: ObjectId of the user to update.
     :param updates: Dictionary of fields to update.
-    :return: True if the update was successful, False otherwise.
+    :return: True if the user existed (even if nothing changed), False otherwise.
     """
     try:
         object_id = validate_object_id(user_id)
         collection = mongo_db.get_collection(collection_name)
         result = collection.update_one({"_id": object_id}, {"$set": updates})
-        return result.modified_count > 0
+
+        # If we matched zero documents, the user truly doesn't exist:
+        if result.matched_count == 0:
+            return False
+
+        # Otherwise we consider it a “success” even if modified_count == 0
+        return True
+
     except (PyMongoError, ValueError) as e:
         raise RuntimeError(f"Error updating user in collection '{collection_name}': {e}")
 
